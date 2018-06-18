@@ -23,25 +23,23 @@ int memoryList[4]; // Indicates what memory is filled
 
 
 void setup() {
-  // put your setup code here, to run once:
   Serial.begin(9600);
   while (!Serial) ; // Wait for serial port to be available
   if (!manager.init())
-  Serial.println("init failed");
+  // Init failed
   delay(1000);
   packageNum = 0;
   memoryPointer = 0;
   for (int i = 0; i< 4; i++){
-    memoryList[0] = 0;
+    memoryList[i] = 0;
   }
-  Serial.println("Setup completed");
+  // Setup complete
 }
 
-void loop() {  
-  // Sending message: 
+void loop() {   
   uint8_t data[] = "Hello from the sender!"; 
   uint8_t new_temp[sizeof(packageNum) + sizeof(data)];
-  new_temp[0] = packageNum;
+  new_temp[0] = packageNum; // Adding package number
   for (int i=0; i< sizeof(data); i++){
     new_temp[i+1] = data[i];
   }
@@ -51,8 +49,8 @@ void loop() {
   Serial.print((int)new_temp[0]); // Printing the first part of the message
   Serial.println((char*)&new_temp[1]); // Printing the text value
   
-  if (!manager.sendtoWait(data, sizeof(data), RECEIVER_ADDRESS)){ // Sending message and waiting for reply
-    Serial.println("Send unsuccessful");
+  if (!manager.sendtoWait(new_temp, sizeof(new_temp), RECEIVER_ADDRESS)){ // Sending message and waiting for reply
+    // Send unsuccessful
     
     // Testing if the memory has space for the new data
     if (memoryPointer >= 4){ // This is highest legal value, need to look for empty memory
@@ -60,9 +58,9 @@ void loop() {
       memoryPointer = findEmptyMemory();
     }  
     writeToMemory(new_temp, sizeof(new_temp)); 
-    memoryPointer ++;
+    
   }
-  else Serial.println("Send successful");
+  // Send successful
 
   // Listening for message for timeout ms
   int timeout = 2000;
@@ -70,18 +68,29 @@ void loop() {
   uint8_t from;
   // This function returns buf with the data, bufLen with the dataSize and from has the value of the sender. 
   if (!manager.recvfromAckTimeout(buf, &bufLen, timeout, &from)){ // Listening for incoming messages 
-    Serial.println("Receive failed, check if server is online");
   }
   else{
-    Serial.println("Received a message from the server: ");
-    Serial.println((char*)buf);
-    Serial.print("Sender of the message was : 0x");
+    Serial.print("Message from : 0x");
     Serial.println(from, HEX);
+    Serial.println((char*)&buf[0]);
   }  
+  // Receiving double because of repeater:
+  int receivingBit = 1; 
+  while (receivingBit){
+    if (manager.recvfromAckTimeout(buf, &bufLen, timeout, &from)){
+      Serial.println("Received a message from the repeater?: ");
+      Serial.println((char*)buf);
+      Serial.print("Sender of the message was : 0x");
+      Serial.println(from, HEX);
+    }
+    else receivingBit =0;
+  }
+  
   if (packageNum >= 7){ packageNum = 0;} // counting package numbers 0-7 to try to use 3 bit.
   packageNum ++;
   delay(6000);
 }
+
 
 // uint8_t memory[][24]
 int findEmptyMemory(){ // Returning 5 if memory is full
@@ -124,6 +133,7 @@ void writeToMemory(uint8_t* message, int messageLength){ // This function does n
     memory[memoryPointer][i] = message[i];
   }
   memoryList[memoryPointer] = 1; // Indicating that the position is filled
+  memoryPointer ++;
 }
 
 
