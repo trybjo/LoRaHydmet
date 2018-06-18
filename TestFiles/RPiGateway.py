@@ -6,8 +6,7 @@ Created on Fri Jun 15 09:10:14 2018
 """
 
 import socket
-import sys
-# from time import sleep
+#import sys
 
 # Library for encryption/decryption
 from Crypto.Cipher import AES
@@ -32,7 +31,7 @@ def decryptMessage(encryptedMessage):
 # We need a host and a port to connect to. host is the IP address.
 # IP address must be inside " ".
 host = "10.10.212.9"
-port = 8888
+port = 8889
 
 # AF_INET means that we're using IP version 4. SOCK_STREAM means that we're using TCP.
 # Try to create socket.
@@ -52,11 +51,44 @@ print("IP Address: " + host)
 # Connect to the port on this IP. 
 # The argument is passed into a data structure that the connect function uses. We therefore need an extra ()
 s.connect((host, port))
+#print("Socket connected to " + host + " on port " + port)
 
-# print("Socket connected to " + host + " on port " + port)
 
+
+while True:
+    
+    # Get the last line from the Log.txt file. This is the last recieved message from the nodes.
+    with open("/home/pi/Documents/Log.txt", "r") as f:
+        lines = f.read().splitlines()
+        last_line = lines[-1]
+        
+    # The message needs to be a multiple of 16.
+    # Here open spaces are added on behind the message in order to become 32 bytes.
+    Message = last_line + " "*(32-len(last_line))
+    
+    # Encrypt the message.
+    encryptedMessage = encryptMessage(Message)
+    
+    # Send the encrypted message.
+    s.sendall(encryptedMessage)
+    
+    # Check if the last line in Log.txt is equal to the message last sent.
+    # If equal, keep checking till it changes.
+    while True:
+        with open("/home/pi/Documents/Log.txt", "r") as f:
+            lines = f.read().splitlines()
+            new_last_line = lines[-1]
+            if last_line != new_last_line:
+                break
+    
+    
+    
+    
+    
+    
 
     
+    '''  
 # Send a message/data to the server.
 Message = "Hemmelig melding"
 Message = encryptMessage(Message)
@@ -70,7 +102,10 @@ except socket.error:
     print("Did not send successfully")
     sys.exit()
     
-print("Message sent successfully")
+print("Message 1 sent successfully")
+
+    
+print("Message 2 sent successfully")
 
 # Get the reply. This will be all the data that are sent back. (Here up to 4096 bytes).
 reply = s.recv(4096)
@@ -79,3 +114,7 @@ print(reply)
 
 # Close the socket connection
 s.close()
+
+sys.exit()
+
+'''
