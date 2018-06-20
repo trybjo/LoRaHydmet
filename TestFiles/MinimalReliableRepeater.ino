@@ -49,136 +49,82 @@ void setup() {
 
 void loop() {
   if (manager.available()){
-    Serial.println();
     uint8_t bufLen = sizeof(buf); // Needs to be here to convert to uint8_t
     uint8_t from;  // From becomes author of the message
     
     if (manager.recvfromAck(buf, &bufLen, &from)){ //Function changes value of buf, bufLen and from
       // Receive success
-      if (!packageInMemory((int)buf[0], &from)){
+      if (!packageInMemory((int)buf[0], from)){
         // New message, this is interesting
-        updatePackageMemory((int)buf[0], &from);
-        Serial.print("Received message from 0x");
-        Serial.print(from, HEX);
-        Serial.println(": ");
-        Serial.print((int)buf[0]);
-        Serial.println((char*)&buf[1]);  
+        updatePackageMemory((int)buf[0], from);
+        printReceived(&buf[0], from);
+          
         if (!forwardMessage(buf, bufLen, from)){ // Pretends to be original sender when forwardning
           // The forwarding was not successful, need to write to memory
           if (from == SENDER_ADDRESS){
             // We only store messages from the sender             
             writeToMemory(buf, bufLen); //, from); 
-            printFullDataMessage();
-          }          
-        } 
+            printMemory();
+          }  
+          else Serial.println("Forward to sender not successful");        
+        }
+        else Serial.println("Success");
+        // else, forward success
       }
       // else, we received a duplicate              
     }
-
-    // After one receive, we want to listen for more messages before sending from memory
-//    bool receiving = true;
-//    int timeout = 1000; // ms
-//    while(receiving){  
-//      // clearReceivedData(buf, &bufLen, &from);
-//      if (!manager.recvfromAckTimeout(buf, &bufLen, &from)){ //Function changes value of buf, bufLen and from
-//        // Receive not successful
-//        Serial.println("Receive unsuccessful, assuming no more messages.");
-//        receiving = false;      
-//      }
-//      else{ 
-//        // Receive success
-//        if (!packageInMemory((int)buf[0], &from)){
-//          updatePackageMemory((int)buf[0], &from);
-//          Serial.print("Repeater received message from 0x");
-//          Serial.print(from, HEX);
-//          Serial.println(": ");
-//          Serial.print((int)buf[0]);
-//          Serial.println((char*)&buf[1]);  
-//          if (!forwardMessage(buf, bufLen, from)){ // Pretends to be original sender when forwardning
-//            // The forwarding was not successful, need to write to memory            
-//            updatePointer(from);        
-//            writeToMemory(buf, bufLen, from); 
-//            printFullDataMessage();
-//          }          
-//                 
-//        }
-//        // else, we received a duplicate
-//                 
-//      }
-//    }
     sendFromMemory(memorySender, SENDER_ADDRESS, RECEIVER_ADDRESS);
   }
 }
 
-void clearReceivedData(uint8_t* buf,uint8_t* bufLen, uint8_t* from){
-  buf[0] = (char)0; // Setting termination bit
-  bufLen = 0;
-  from = (char)0;
-}
 void updatePackageMemory(int package, uint8_t from){
   if (from == SENDER_ADDRESS){
-    packageMemoryFromSender[packageMemoryFromSenderPointer] = package;
-    if (packageMemoryFromSenderPointer < 3){
-      // The pointer can legally increase
-      packageMemoryFromSenderPointer++;
-    }
-    else packageMemoryFromSenderPointer = 0;
+    updatePackageMemory(&packageMemoryFromSender[0], &packageMemoryFromSenderPointer, package);
   }
   else if (from == RECEIVER_ADDRESS){
-    packageMemoryFromReceiver[packageMemoryFromReceiverPointer] = package;
-    if (packageMemoryFromReceiverPointer < 3){
-      // The pointer can legally increase
-      packageMemoryFromReceiverPointer++;
-    }
-    else packageMemoryFromReceiverPointer = 0;
+    updatePackageMemory(&packageMemoryFromReceiver[0], &packageMemoryFromReceiverPointer, package);
   }
-  
+}
+void updatePackageMemory(int* packageMemory, uint8_t* memPointer, int package){
+  packageMemory[*memPointer] = package;
+  updatePointer(memPointer);
 }
 
+void updatePointer(uint8_t* memPointer){
+  if (memPointer[0] < 3){
+    memPointer[0] ++;
+  }
+  else memPointer[0] = 0;
+}
+
+ 
 // Returns 1 if the package is in memory
 int packageInMemory(int package, uint8_t from){
   if (from == SENDER_ADDRESS){
-    for (int i = 0; i < sizeof(packageMemoryFromSender); i++){
-      // Iterates over memory
-      if (packageMemoryFromSender[i] == package){
-        return 1;
-      }
-    }
+    return packageInMemory(&packageMemoryFromSender[0], package);
   }
   else if (from == RECEIVER_ADDRESS){
-    for (int i = 0; i < sizeof(packageMemoryFromReceiver); i++){
-      if (packageMemoryFromReceiver[i] == package){
-        return 1;
-      }
+    return packageInMemory(&packageMemoryFromReceiver[0], package);
+  }
+}
+// Returns 1 if the package is in memory
+int packageInMemory(int* packageMemory, int package){
+  for (int i = 0; i<4; i++){
+    if (packageMemory[i] == package){
+      return 1;
     }
-  }  
+  }
   return 0;
 }
 
 // Pretends to be the original sender, and sends to the original destination
-int forwardMessage(uint8_t* buf, int bufLen, uint8_t from){
-  Serial.println("Forwarding message");
-  if(from == SENDER_ADDRESS){ // the originator of the message is the sender    
-    
-    //sendtoWaitRepeater(buf,len, destinationAddress, mySenderAddress)
-    if (!manager.sendtoWaitRepeater(buf, bufLen, RECEIVER_ADDRESS, SENDER_ADDRESS)){
-      Serial.println("Forward unnsuccessful");      
-      return 0;      
-    }
-    else{
-      Serial.println("Forward successful");
-      return 1;
-    }
+bool forwardMessage(uint8_t* buf, int bufLen, uint8_t from){
+  if(from == SENDER_ADDRESS){
+    // The originator of the message is the sender
+    return manager.sendtoWaitRepeater(buf, bufLen, RECEIVER_ADDRESS, SENDER_ADDRESS);
   }
-  else if (from == RECEIVER_ADDRESS){ // The originator of the message is the receiver
-    if(!manager.sendtoWaitRepeater(buf, bufLen, SENDER_ADDRESS, RECEIVER_ADDRESS)){
-      Serial.println("Forward unnsuccessful");
-      return 0;
-    }
-    else{
-      Serial.println("Forward successful");
-      return 1;
-    }
+  else if (from == RECEIVER_ADDRESS){
+    return manager.sendtoWaitRepeater(buf, bufLen, SENDER_ADDRESS, RECEIVER_ADDRESS);
   }
 }
 
@@ -186,9 +132,7 @@ int forwardMessage(uint8_t* buf, int bufLen, uint8_t from){
 // Returning 0 if memory is full
 int findEmptyMemory(){    
   for (int i = 0; i < 4; i++){ // Assuming memory has size of 4
-    if (memorySender[i][1] == 0){
-      Serial.print("Found empty memory at position: ");
-      Serial.println(i);      
+    if (memorySender[i][1] == 0){     
       return i;
     }
   }
@@ -207,14 +151,14 @@ void writeToMemory(uint8_t* message, int messageLength){
 int sendFromMemory(uint8_t memory[][24], uint8_t author, uint8_t endDest){ 
   for (int i = 0; i <4; i++){ // Iterating over the 4 memory positions
     if (memory[i][1] != (char)0){
-      // Don't try to send empty memory
-      
-      if (!manager.sendtoWaitRepeater(&memory[i][0], sizeof(memory[i]), endDest, author)){ // Trying to send from memory
-        // Not success
+      // Don't try to send empty memory      
+      if (manager.sendtoWaitRepeater(&memory[i][0], sizeof(memory[i]), endDest, author)){ // Trying to send from memory
+        Serial.println("Send from memory success");
+        deleteFromMemory(i, author);          
       }
       else{
-        Serial.print("Send from memory success");
-        deleteFromMemory(i, author);        
+        // Not success  
+        Serial.println("Send from memory not a success");  
       }       
     }        
   }
@@ -227,7 +171,30 @@ void deleteFromMemory(int deletePosition, uint8_t author){
   } 
 }
 
-void printFullDataMessage(){
+//void printPackageMemory(){
+//  Serial.println("Package memory from Sender: ");
+//  for (int i = 0; i < 4; i++){
+//    if (packageMemoryFromSender[i] != -1){
+//      Serial.println(packageMemoryFromSender[i]);
+//    }    
+//  }
+//  Serial.println("Package memory from Receiver: ");
+//  for (int i = 0; i < 4; i++){
+//    if (packageMemoryFromReceiver[i] != -1){
+//      Serial.println(packageMemoryFromReceiver[i]);
+//    }    
+//  }
+//}
+
+void printReceived(uint8_t* message, uint8_t from){
+  Serial.print("Received message from: ");
+  Serial.print(from, HEX);
+  Serial.print(" : ");
+  Serial.print((int)message[0]);
+  Serial.print((char*)&message[1]);
+  Serial.print(" : ");  
+}
+void printMemory(){
   Serial.println("Memory:");
   for (int i = 0; i < 4 ; i++){
     if (memorySender[i][1] != (char)0){
