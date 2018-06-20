@@ -19,8 +19,6 @@ uint8_t packageNum;
 // Don't put this on the stack:
 uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
 
-uint8_t memoryReceiver[4][24]; // Memory that can store 4 packages of size 24
-int memoryPointerReceiver;
 int packageMemoryFromReceiver[4]; // Storing the package number of messages from the receiver
 uint8_t packageMemoryFromReceiverPointer; // Points at next place to write memory
 
@@ -39,7 +37,6 @@ void setup() {
   Serial.println("init failed");
   delay(1000);
   packageNum = 0;
-  memoryPointerReceiver = 0;
   memoryPointerSender = 0;
   packageMemoryFromReceiverPointer = 0;
   packageMemoryFromSenderPointer = 0;
@@ -47,6 +44,7 @@ void setup() {
   for (int i = 0; i< 4; i++){
     packageMemoryFromSender[i] = -1; // Initating as invalid package number
     packageMemoryFromReceiver[i] = -1;
+    memorySender[i][1] = (char)0;
   }
   Serial.println("Setup repeater completed");
 }
@@ -57,11 +55,7 @@ void loop() {
     uint8_t bufLen = sizeof(buf); // Needs to be here to convert to uint8_t
     uint8_t from;  // From becomes author of the message
     
-    if (!manager.recvfromAck(buf, &bufLen, &from)){ //Function changes value of buf, bufLen and from
-      // Receive not successful
-      Serial.println("Receive unsuccessful");      
-    }
-    else{ 
+    if (manager.recvfromAck(buf, &bufLen, &from)){ //Function changes value of buf, bufLen and from
       // Receive success
       if (!packageInMemory((int)buf[0], &from)){
         // New message, this is interesting
@@ -113,7 +107,6 @@ void loop() {
 //      }
 //    }
     sendFromMemory(memorySender, SENDER_ADDRESS, RECEIVER_ADDRESS);
-    sendFromMemory(memoryReceiver, RECEIVER_ADDRESS, SENDER_ADDRESS);
   }
 }
 
@@ -213,26 +206,6 @@ int updatePointer(uint8_t from){ // Returning 0 if memory is full
       return 0;
     }
   }
-  else if (from == RECEIVER_ADDRESS){
-    if (memoryPointerReceiver < 4){
-      // Pointer inside legal boundaries after ++
-      // memoryPointerReceiver ++; 
-      return 1;
-    }
-    else{
-      for (int i = 0; i < 4; i++){ // Assuming memory has size of 4
-        if (memoryReceiver[i][1] == 0){
-          Serial.print("Found empty memory at position: ");
-          Serial.println(i);      
-          memoryPointerReceiver = i;
-          return 1;
-        }         
-      }
-      memoryPointerReceiver = 0; //  
-      return 0;  
-    }
-  return 0; // No memory is full, overwriting should start at pos 0
-  }
 }
 
 // sending all elements of memory, returns 1 for success
@@ -255,13 +228,8 @@ int sendFromMemory(uint8_t memory[][24], uint8_t author, uint8_t endDest){
 void deleteFromMemory(int deletePosition, uint8_t author){
   if (author == SENDER_ADDRESS){
     memorySender[deletePosition][0] = (char)0;
-    memorySender[deletePosition][1] = (char)0;
-    
-  }
-  else if (author == RECEIVER_ADDRESS){
-    memoryReceiver[deletePosition][0] = (char)0;
-    memoryReceiver[deletePosition][1] = (char)0;
-  }  
+    memorySender[deletePosition][1] = (char)0;    
+  } 
 }
 
 // Writes to corresponding memory, updates memoryPointer
@@ -274,12 +242,6 @@ void writeToMemory(uint8_t* message, int messageLength, uint8_t author){ // This
     }
     memoryPointerSender ++;    
   }
-  else if (author == RECEIVER_ADDRESS){ // We write to receiver memory
-    for(int i = 0; i < messageLength; i++){
-      memoryReceiver[memoryPointerReceiver][i] = message[i];
-    }
-    memoryPointerReceiver ++;
-  }  
 }
 
 
