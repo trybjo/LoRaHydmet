@@ -14,7 +14,6 @@ RH_RF95 lora;     // Instanciate the LoRA driver
 // Class to manage message delivery and receipt,using the lora declared above
 RHReliableDatagram manager(lora, SENDER_ADDRESS);
 uint8_t packageNum; 
-int memoryPointer;
 // Don't put this on the stack:
 uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
 uint8_t memory[4][24]; // Memory that can store 4 packages of size 24
@@ -31,7 +30,6 @@ void setup() {
   delay(1000);
   packageNum = 0;
   packageMemoryPointer = 0;
-  memoryPointer = 0;  
   for (int i = 0; i< 4; i++){
     packageMemory[i] = -1;
     memory[i][1] = (char)0; // Because first bit is packageNum
@@ -45,18 +43,13 @@ void loop() {
   new_temp[0] = packageNum; // Adding package number
   for (int i=0; i< sizeof(data); i++){
     new_temp[i+1] = data[i];
-  }
-  Serial.println();
-  
-  Serial.println("Message generated: ");
+  } 
+  Serial.println("\nMessage generated: ");
   Serial.print((int)new_temp[0]); // Printing the first part of the message
   Serial.println((char*)&new_temp[1]); // Printing the text value
   
-  if (!manager.sendtoWait(new_temp, sizeof(new_temp), RECEIVER_ADDRESS)){ // Sending message and waiting for reply
-    
-    // Send unsuccessful    
-    // Testing if the memory has space for the new data
-    memoryPointer = findEmptyMemory();    
+  if (!manager.sendtoWait(new_temp, sizeof(new_temp), RECEIVER_ADDRESS)){     
+    // Send unsuccessful       
     writeToMemory(new_temp, sizeof(new_temp));   
     printFullDataMessage();   
   }
@@ -113,18 +106,7 @@ void clearReceivedData(uint8_t* buf,uint8_t* bufLen, uint8_t* from){
   from = (char)0;
 }
 
-// Returning position of unused memory
-// Returning 0 if memory is full
-int findEmptyMemory(){    
-  for (int i = 0; i < 4; i++){ // Assuming memory has size of 4
-    if (memory[i][1] == 0){
-      Serial.print("Found empty memory at position: ");
-      Serial.println(i);      
-      return i;
-    }
-  }
-  return 0; // No memory is empty, overwriting should start at pos 0
-}
+
 
 void sendFromMemory(){ // trying to send all elements of memory
   for (int i = 0; i <4; i++){ 
@@ -146,16 +128,25 @@ void sendFromMemory(){ // trying to send all elements of memory
 void deleteFromMemory(int deletePosition){
   memory[deletePosition][0] = (char)0; // Setting first element as termination bit
   memory[deletePosition][1] = (char)0;
-//  for(int i = 0; i < 24; i++){ // The full pre-defined memory size
-//    memory[deletePosition][i] = 0;
-//  }
 }
 
-void writeToMemory(uint8_t* message, int messageLength){ // This function does not work, trouble getting the full message
-  Serial.print("Storing message in memory position: ");
-  Serial.println(memoryPointer);
+// Returning position of unused memory
+// Returning 0 if memory is full
+int findEmptyMemory(){    
+  for (int i = 0; i < 4; i++){ // Assuming memory has size of 4
+    if (memory[i][1] == 0){
+      Serial.print("Found empty memory at position: ");
+      Serial.println(i);      
+      return i;
+    }
+  }
+  return 0; // No memory is empty, overwriting should start at pos 0
+}
+
+void writeToMemory(uint8_t* message, int messageLength){ 
+  int _emptyMemory = findEmptyMemory();
   for(int i = 0; i < messageLength; i++){
-    memory[memoryPointer][i] = message[i];
+    memory[_emptyMemory][i] = message[i];
   }
 }
 
