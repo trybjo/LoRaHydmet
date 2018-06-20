@@ -40,7 +40,7 @@ void setup() {
 void loop() {   
   uint8_t data[] = "Hello from the sender!"; 
   uint8_t numberedData[sizeof(packageNum) + sizeof(data)];
-  addPackageNum(&numberedData[0], &data[0]);
+  addPackageNum(&numberedData[0], &data[0], sizeof(data));
   
   Serial.println("\nMessage generated: ");
   Serial.print((int)numberedData[0]); // Printing the first part of the message
@@ -81,9 +81,9 @@ void loop() {
   
   delay(6000);
 }
-void addPackageNum(uint8_t* result, uint8_t* input){
+void addPackageNum(uint8_t* result, uint8_t* input, int sizeOfInput){
   result[0] = packageNum;
-  for (int i=0; i< sizeof(input); i++){
+  for (int i=0; i< sizeOfInput; i++){
     result[i+1] = input[i];
   }
 }
