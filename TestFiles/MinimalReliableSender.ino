@@ -52,21 +52,16 @@ void loop() {
     printFullDataMessage();   
   }
   sendFromMemory(); 
- 
 
-  // Listening for message for timeout ms
-  int timeout = 2000;
   uint8_t bufLen = sizeof(buf);
   uint8_t from;
   
-  // recv function returns buf with the data, 
-  // bufLen with the data length,
-  // from has the value of the sender
-  // Receiving multiple times because of repeater, even uninteresting packages deserves an ack. 
+  // Receiving multiple times because of repeater, even uninteresting packages deserves an ack.
+  // timeout = 2000 ms
   bool receiving = true; 
   while (receiving){
     clearReceivedData(buf, &bufLen, &from);
-    if (manager.recvfromAckTimeout(buf, &bufLen, timeout, &from)){
+    if (manager.recvfromAckTimeout(buf, &bufLen, 2000, &from)){
       // Successfully received a message
       if (!packageInMemory((int)buf[0])){
         // This is a new message, we are interested
@@ -75,10 +70,9 @@ void loop() {
       }
       else{Serial.println("Received duplicate");};      
     }
-    else receiving = false; // timeout
+    else receiving = false;
   }
-  updatePackageNum();
-  
+  updatePackageNum();  
   delay(6000);
 }
 void addPackageNum(uint8_t* result, uint8_t* input, int sizeOfInput){
@@ -100,8 +94,6 @@ void clearReceivedData(uint8_t* buf,uint8_t* bufLen, uint8_t* from){
   bufLen = 0;
   from = (char)0;
 }
-
-
 
 void sendFromMemory(){ // trying to send all elements of memory
   for (int i = 0; i <4; i++){ 
@@ -144,6 +136,8 @@ void writeToMemory(uint8_t* message, int messageLength){
     memory[_emptyMemory][i] = message[i];
   }
 }
+
+
 
 // Stores package number of new packages incoming
 void updatePackageMemory(int package){
