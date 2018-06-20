@@ -34,30 +34,24 @@ void setup() {
     packageMemory[i] = -1;
     memory[i][1] = (char)0; // Because first bit is packageNum
   }
-  // Setup complete
 }
+
 
 void loop() {   
   uint8_t data[] = "Hello from the sender!"; 
-  uint8_t new_temp[sizeof(packageNum) + sizeof(data)];
-  new_temp[0] = packageNum; // Adding package number
-  for (int i=0; i< sizeof(data); i++){
-    new_temp[i+1] = data[i];
-  } 
-  Serial.println("\nMessage generated: ");
-  Serial.print((int)new_temp[0]); // Printing the first part of the message
-  Serial.println((char*)&new_temp[1]); // Printing the text value
+  uint8_t numberedData[sizeof(packageNum) + sizeof(data)];
+  addPackageNum(&numberedData[0], &data[0]);
   
-  if (!manager.sendtoWait(new_temp, sizeof(new_temp), RECEIVER_ADDRESS)){     
+  Serial.println("\nMessage generated: ");
+  Serial.print((int)numberedData[0]); // Printing the first part of the message
+  Serial.println((char*)&numberedData[1]); // Printing the text value
+  
+  if (!manager.sendtoWait(numberedData, sizeof(numberedData), RECEIVER_ADDRESS)){     
     // Send unsuccessful       
-    writeToMemory(new_temp, sizeof(new_temp));   
+    writeToMemory(numberedData, sizeof(numberedData));   
     printFullDataMessage();   
   }
-  else{
-    Serial.print("Sending size: ");
-    Serial.println(sizeof(new_temp));
-  }
-  sendFromMemory();// Lasts because of setup in repeater 
+  sendFromMemory(); 
  
 
   // Listening for message for timeout ms
@@ -69,28 +63,29 @@ void loop() {
   // bufLen with the data length,
   // from has the value of the sender
   // Receiving multiple times because of repeater, even uninteresting packages deserves an ack. 
-  int receivingBit = 1; 
-  while (receivingBit){
+  bool receiving = true; 
+  while (receiving){
     clearReceivedData(buf, &bufLen, &from);
     if (manager.recvfromAckTimeout(buf, &bufLen, timeout, &from)){
       // Successfully received a message
       if (!packageInMemory((int)buf[0])){
         // This is a new message, we are interested
         updatePackageMemory((int)buf[0]);
-        Serial.print("Received a message: ");
-        Serial.print((int)buf[0]);
-        Serial.println((char*)&buf[1]);
-        Serial.print("Sender of the message was : 0x");
-        Serial.println(from, HEX);
+        printReceived(&buf[0], from);
       }
-      else{Serial.println("Received duplicate");};
-      
+      else{Serial.println("Received duplicate");};      
     }
-    else receivingBit =0; // timeout
+    else receiving = false; // timeout
   }
   updatePackageNum();
   
   delay(6000);
+}
+void addPackageNum(uint8_t* result, uint8_t* input){
+  result[0] = packageNum;
+  for (int i=0; i< sizeof(input); i++){
+    result[i+1] = input[i];
+  }
 }
 
 // counting package numbers 0-7 to try to use 3 bit at some time.
@@ -150,23 +145,7 @@ void writeToMemory(uint8_t* message, int messageLength){
   }
 }
 
-
-void printFullDataMessage(){
-  for (int i = 0; i < 4 ; i++){
-    if (memory[i][1] != (char)0){
-      Serial.print("Memory: ");
-      Serial.print(i);
-      Serial.print(" : ");
-      Serial.print((int)memory[i][0]); // The number that is in front of the message
-      Serial.println((char*)&memory[i][1]); // The text in the message
-    }
-    
-  }
-  Serial.println("");
-}
-
-
-
+// Stores package number of new packages incoming
 void updatePackageMemory(int package){
   packageMemory[packageMemoryPointer] = package;
   if (packageMemoryPointer < 3){
@@ -184,4 +163,30 @@ int packageInMemory(int package){
   }
   return 0;
 }
+
+
+//////////////////// Print functions ////////////////////
+void printFullDataMessage(){
+  for (int i = 0; i < 4 ; i++){
+    if (memory[i][1] != (char)0){
+      Serial.print("Memory: ");
+      Serial.print(i);
+      Serial.print(" : ");
+      Serial.print((int)memory[i][0]); 
+      Serial.println((char*)&memory[i][1]); 
+    }    
+  }
+  Serial.println("");
+}
+
+void printReceived(uint8_t* message, uint8_t from){
+  Serial.print("Received a message: ");
+  Serial.print((int)message[0]);
+  Serial.println((char*)&message[1]);
+  Serial.print("Sender of the message was : 0x");
+  Serial.println(from, HEX);
+}
+
+//////////// These functions take ~ 80 bytes /////////////
+
 
