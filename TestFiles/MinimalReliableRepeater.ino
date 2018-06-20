@@ -24,7 +24,6 @@ uint8_t packageMemoryFromReceiverPointer; // Points at next place to write memor
 
 
 uint8_t memorySender[4][24];
-int memoryPointerSender; // Pointer to next memory to be written
 int packageMemoryFromSender[4]; // Storing the package number of messages from the sender 
 uint8_t packageMemoryFromSenderPointer;
 
@@ -37,7 +36,6 @@ void setup() {
   Serial.println("init failed");
   delay(1000);
   packageNum = 0;
-  memoryPointerSender = 0;
   packageMemoryFromReceiverPointer = 0;
   packageMemoryFromSenderPointer = 0;
   
@@ -67,9 +65,11 @@ void loop() {
         Serial.println((char*)&buf[1]);  
         if (!forwardMessage(buf, bufLen, from)){ // Pretends to be original sender when forwardning
           // The forwarding was not successful, need to write to memory
-          updatePointer(from);        
-          writeToMemory(buf, bufLen, from); 
-          printFullDataMessage();
+          if (from == SENDER_ADDRESS){
+            // We only store messages from the sender             
+            writeToMemory(buf, bufLen); //, from); 
+            printFullDataMessage();
+          }          
         } 
       }
       // else, we received a duplicate              
@@ -139,7 +139,7 @@ void updatePackageMemory(int package, uint8_t from){
 int packageInMemory(int package, uint8_t from){
   if (from == SENDER_ADDRESS){
     for (int i = 0; i < sizeof(packageMemoryFromSender); i++){
-      // Iteates over memory
+      // Iterates over memory
       if (packageMemoryFromSender[i] == package){
         return 1;
       }
@@ -182,31 +182,26 @@ int forwardMessage(uint8_t* buf, int bufLen, uint8_t from){
   }
 }
 
-// Adds 1 to corresponding pointer if value < 4. 
-// If not, finds empty position
-// If not, sets pointer to 0
-int updatePointer(uint8_t from){ // Returning 0 if memory is full
-  if (from == SENDER_ADDRESS){
-    if (memoryPointerSender < 4){
-      // Pointer inside legal boundaries after ++
-      // memoryPointerSender ++;       
-      return 1;
-    }
-    else{
-      for (int i = 0; i < 4; i++){ // Assuming memory has size of 4
-        if (memorySender[i][1] == 0){
-          Serial.print("Found empty memory at position: ");
-          Serial.println(i);      
-          memoryPointerSender = i;
-          return 1;
-        }      
-      }
-      // No empty memory, overwriting from 0
-      memoryPointerSender = 0;
-      return 0;
+// Returning smalles position of unused memory
+// Returning 0 if memory is full
+int findEmptyMemory(){    
+  for (int i = 0; i < 4; i++){ // Assuming memory has size of 4
+    if (memorySender[i][1] == 0){
+      Serial.print("Found empty memory at position: ");
+      Serial.println(i);      
+      return i;
     }
   }
+  return 0; // No memory is empty, overwriting should start at pos 0
 }
+void writeToMemory(uint8_t* message, int messageLength){ 
+  int _emptyMemory = findEmptyMemory();
+  for(int i = 0; i < messageLength; i++){
+    memorySender[_emptyMemory][i] = message[i];
+  }
+}
+
+
 
 // sending all elements of memory, returns 1 for success
 int sendFromMemory(uint8_t memory[][24], uint8_t author, uint8_t endDest){ 
@@ -232,29 +227,16 @@ void deleteFromMemory(int deletePosition, uint8_t author){
   } 
 }
 
-// Writes to corresponding memory, updates memoryPointer
-void writeToMemory(uint8_t* message, int messageLength, uint8_t author){ // This function does not work, trouble getting the full message
-  if (author == SENDER_ADDRESS){ // We write to the sender memory
-    Serial.print("Writing to memory: ");
-    Serial.println(message[1]);
-    for(int i = 0; i < messageLength; i++){    
-     memorySender[memoryPointerSender][i] = message[i];
-    }
-    memoryPointerSender ++;    
-  }
-}
-
-
 void printFullDataMessage(){
   Serial.println("Memory:");
   for (int i = 0; i < 4 ; i++){
-    //if (memorySender[i][1] != (char)0){
+    if (memorySender[i][1] != (char)0){
       Serial.print("For iterator value: ");
       Serial.print(i);
       Serial.print(" : ");
       Serial.print((int)memorySender[i][0]); // The number that is in front of the message
       Serial.println((char*)&memorySender[i][1]); // The text in the message
-   // }    
+    }    
   }
   Serial.println("");
 }
