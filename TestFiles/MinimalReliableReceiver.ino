@@ -27,71 +27,79 @@ void setup() {
   packageMemoryPointer = 0;
 }
 
+// The function calls receive function with or without timeout
+// message, bufLen and from are called by reference
+// This means their values are updated after function call
+bool receive(bool* duplicate, uint8_t* message, uint8_t* bufLen, uint8_t* from, int timeout){
+  bool success;
+  if (timeout == -1){    
+     success = manager.recvfromAck(buf, bufLen, from);
+  }
+  else {
+     success = manager.recvfromAckTimeout(buf, bufLen, timeout, from);
+  }
+  
+  if (success){
+    if (!packageInMemory((int)buf[0])){
+      *duplicate = false;
+      updatePackageMemory((int)buf[0]);
+      printReceived(&buf[0], from[0]);
+    }
+    else {
+      Serial.println("Received duplicate");
+      *duplicate = true;
+    }
+    return true;
+  }
+  else{
+    *duplicate = false;
+    return false;
+  }
+}
+
+
 void loop() {
   if (manager.available()){
     Serial.println();
     uint8_t bufLen = sizeof(buf); // Needs to be here to convert to uint8_t
     uint8_t from;
-    bool receiveSuccess = false;
-    if (!manager.recvfromAck(buf, &bufLen, &from)){ //Function changes value of buf, bufLen and from
-      Serial.println("Receive unsuccessful, was message not for me?");
-      receiveSuccess = false;
-    }
-    else{
-      receiveSuccess = true;
-      if (!packageInMemory((int)buf[0])){
-        updatePackageMemory((int)buf[0]);
-        Serial.print("Received message from 0x");
-        Serial.print(from, HEX);
-        Serial.print(": ");
-        Serial.print((int)buf[0]);
-        Serial.println((char*)&buf[1]);
-      }
-      else Serial.println("Received duplicate");          
-    }
+    bool duplicate;
+    bool receiveSuccess = receive(&duplicate, buf, &bufLen, &from, -1);
+
     // After receiving one message, there may be more incoming
     bool receiving = true; // 1 when receiving
-    int timeout = 700; // ms
+    int timeout = 1000; // ms
     while (receiving){
-      if (!manager.recvfromAckTimeout(buf, &bufLen, timeout, &from)){ // Listening for incoming messages 
-       Serial.println("Assuming no more messages for this time");
-       receiving = false;
-      }
-      else{
-       if (!packageInMemory((int)buf[0])){
-        updatePackageMemory((int)buf[0]);
-        Serial.print("Received message from 0x");
-        Serial.print(from, HEX);
-        Serial.print(": ");
-        Serial.print((int)buf[0]);
-        Serial.println((char*)&buf[1]);   
-       }
-       else 
-         Serial.println("Received duplicate");
-      }
-    } 
+      receiving = receive(&duplicate, buf, &bufLen, &from, timeout);
+    }
 
     // After successful receive(s), send a message: 
     if (receiveSuccess){
       uint8_t data[] = "And hello back to you";
-      uint8_t new_temp[sizeof(packageNum) + sizeof(data)];
-      new_temp[0] = packageNum; // Adding packet number
-      for(int i = 0; i<sizeof(data); i++){
-        new_temp[i+1] = data[i];
-      }
+      uint8_t numberedResponse[sizeof(packageNum) + sizeof(data)];
+      addPackageNum(&numberedResponse[0], &data[0], sizeof(data));
       
-      if (!manager.sendtoWait(new_temp, sizeof(new_temp), from)){
+      if (!manager.sendtoWait(numberedResponse, sizeof(numberedResponse), from)){
         Serial.println("Sending failed");
       }
       else {
         Serial.print("Sending successful: ");
-        Serial.print((int)new_temp[0]);
-        Serial.println((char*)&new_temp[1]);
-        
-        if(packageNum >=7){packageNum = 0;}
-        else packageNum ++;
+        Serial.print((int)numberedResponse[0]);
+        Serial.println((char*)&numberedResponse[1]);
+        updatePackageNum();
       }
     }
+  }
+}
+void updatePackageNum(){
+  if (packageNum >= 7){ packageNum = 0;} 
+  else packageNum ++;
+}
+
+void addPackageNum(uint8_t* result, uint8_t* input, int sizeOfInput){
+  result[0] = packageNum;
+  for (int i=0; i< sizeOfInput; i++){
+    result[i+1] = input[i];
   }
 }
 
@@ -111,5 +119,13 @@ int packageInMemory(int package){
     }
   }
   return 0;
+}
+
+void printReceived(uint8_t* message, uint8_t from){
+  Serial.print("Received message from: ");
+  Serial.print(from, HEX);
+  Serial.print(" : ");
+  Serial.print((int)message[0]);
+  Serial.println((char*)&message[1]);  
 }
 
