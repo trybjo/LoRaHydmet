@@ -1,12 +1,7 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Fri Jun 15 09:10:14 2018
-
-@author: Andreas
-"""
-
 import socket
-#import sys
+from time import sleep
+import time
 
 # Library for encryption/decryption
 from Crypto.Cipher import AES
@@ -38,8 +33,7 @@ port = 8889
 try:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 except socket.error:
-    print("Failed to connect")
-    sys.exit();
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
 
 # If the code have passed the "test", it means that the socket has been created.
 print("Socket has been created")
@@ -53,68 +47,167 @@ print("IP Address: " + host)
 s.connect((host, port))
 #print("Socket connected to " + host + " on port " + port)
 
+# A variable that keeps track of whether or not were connected to the server.
+connected = True
+
 
 
 while True:
     
-    # Get the last line from the Log.txt file. This is the last recieved message from the nodes.
-    with open("/home/pi/Documents/Log.txt", "r") as f:
-        lines = f.read().splitlines()
-        last_line = lines[-1]
+    try:
         
-    # The message needs to be a multiple of 16.
-    # Here open spaces are added on behind the message in order to become 32 bytes.
-    Message = last_line + " "*(32-len(last_line))
+        # A variable that keeps track of how many packages that are not sent if there is a connection error.
+        # -1 means that everything is on track. -2 means that one is on holdfor sending. -3 mens two are on hold etc.
+        logIndex = -1
+        
+        # If the lastSentMessage file is empty, send the current file and take it from there.
+        with open("/home/pi/Documents/LastSentMessage.txt", "r") as l:
+            lastSentMessage = l.read()
+            if lastSentMessage != '':
+        
+                # Find out what the last sendt message is.
+                with open("/home/pi/Documents/LastSentMessage.txt", "r") as l:
+                    lines = l.read().splitlines()
+                    lastSentMessage = lines[-1]
+                    lastSentMessage = lastSentMessage.strip()
+                    
+                # Find out how far back in the log that message is (in case messages haven't been sent because of connection loss).
+                foundLastSentMessageInLog = False
+                while foundLastSentMessageInLog == False:
+                    with open("/home/pi/Documents/Log.txt", "r") as f:
+                        lines = f.read().splitlines()
+                        messageFromLog = lines[logIndex]
+                    if messageFromLog == lastSentMessage:
+                        foundLastSentMessageInLog = True
+                        f.close()
+                    else:
+                        logIndex += -1
+                        f.close()
+            
+            # If the lastSentMessage file is empty, logIndex is set to -2 to avoid bug in next for loop.
+            else:
+                logIndex = -2
+                
+        for i in range(logIndex+1, 0, +1):
+            with open("/home/pi/Documents/Log.txt", "r") as f:
+                lines = f.read().splitlines()
+                currentMessage = lines[i]
+                sleep(1)
+            Message = currentMessage + " "*(32-len(currentMessage))
+            encryptedMessage = encryptMessage(Message)
+            s.sendall(encryptedMessage)
+            s.settimeout(5)
+            svar = s.recv(1024)
+            print(svar.decode())
+            sleep(1)
+            l = open("/home/pi/Documents/LastSentMessage.txt", "w")
+            l.write(Message)
+            l.close()
+            lastSentMessage = Message.strip()
+            
+ 
+        while True:
+            with open("/home/pi/Documents/Log.txt", "r") as f:
+                lines = f.read().splitlines()
+                new_last_line = lines[-1]
+                if currentMessage != new_last_line:
+                    break
+           
+           
+           
+        
+    except:
+        connected = False
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        print("Connection lost. Reconnecting...")
+        while not connected:
+            # Try to reconnect, otherwise sleep for two seconds.
+            try:
+                s.connect((host, port))
+                connected = True
+                print("Re-connected")
+            except socket.error:
+                sleep(2)
+       
+        
+        
+      
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+'''        
+        
+        
     
-    # Encrypt the message.
-    encryptedMessage = encryptMessage(Message)
-    
-    # Send the encrypted message.
-    s.sendall(encryptedMessage)
-    
-    # Check if the last line in Log.txt is equal to the message last sent.
-    # If equal, keep checking till it changes.
-    while True:
+        # Get the last line from the Log.txt file. This is the last recieved message from the nodes.
         with open("/home/pi/Documents/Log.txt", "r") as f:
             lines = f.read().splitlines()
-            new_last_line = lines[-1]
-            if last_line != new_last_line:
-                break
-    
-    
-    
-    
-    
-    
+            last_line = lines[-1]
+            
+        # The message needs to be a multiple of 16.
+        # Here open spaces are added on behind the message in order to become 32 bytes.
+        Message = last_line + " "*(32-len(last_line))
+        
+        # Encrypt the message.
+        encryptedMessage = encryptMessage(Message)
+        
+        # Send the encrypted message.
+        s.sendall(encryptedMessage)
+        
+        # Check if the last line in Log.txt is equal to the message last sent.
+        # If equal, keep checking till it changes.
+        while True:
+            with open("/home/pi/Documents/Log.txt", "r") as f:
+                lines = f.read().splitlines()
+                new_last_line = lines[-1]
+                if last_line != new_last_line:
+                    break
+        
+        
+    except:
+        connected = False
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        print("Connection lost. Reconnecting...")
+        while not connected:
+            # Try to reconnect, otherwise sleep for two seconds.
+            try:
+                s.connect((host, port))
+                connected = True
+                print("Re-connected")
+            except socket.error:
+                sleep(2)
+                
+       
+''' 
 
-    
-    '''  
-# Send a message/data to the server.
-Message = "Hemmelig melding"
-Message = encryptMessage(Message)
 
-# We will now try to send this message on the socket. This function will send the whole message.
-# .encode() converts the string into a byte array.
-try:
-    # s.sendall(Message.encode())
-    s.sendall(Message)
-except socket.error:
-    print("Did not send successfully")
-    sys.exit()
-    
-print("Message 1 sent successfully")
+# If connection is lost, try to reconnect
+#if(socket.error):
+#    s.connect((host, port))
 
-    
-print("Message 2 sent successfully")
 
+#except socket.error:
+#    print("Did not send successfully")
+#    sys.exit()
+  
 # Get the reply. This will be all the data that are sent back. (Here up to 4096 bytes).
-reply = s.recv(4096)
+#reply = s.recv(4096)
 
-print(reply)
+#print(reply)
 
 # Close the socket connection
-s.close()
-
-sys.exit()
-
-'''
+#s.close()
+#
+#sys.exit()
