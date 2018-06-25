@@ -60,7 +60,7 @@ void setup()
   // The default transmitter power is 13dBm, using PA_BOOST.
   // If you are using RFM95/96/97/98 modules which uses the PA_BOOST transmitter pin, then 
   // you can set transmitter powers from 5 to 23 dBm:
-  rf95.setTxPower(20, false);
+  rf95.setTxPower(13, false);
 }
 
 
@@ -76,17 +76,17 @@ void loop()
     {
       digitalWrite(LED, HIGH);
 //      RH_RF95::printBuffer("Received: ", buf, len);
-      Serial.print("Temperature: ");
+      Serial.print("Temp: ");
       //uint8PosToFloat(uint8_t* input, int usedSize, int startPos, int decimals)
       Serial.print(uint8PosToFloat(buf, 2, 0, 2));
       
-      Serial.print("°C , Humidity: ");
+      Serial.print("*C Humidity: ");
       Serial.print(uint8PosToFloat(buf, 2, 2, 2));
-      Serial.print("% , Pressure: ");
+      Serial.print("% Pressure: ");
       Serial.print(uint8PosToLongInt(buf, 3, 4));
-      Serial.print("Pa, Time: ");
+      Serial.print("Pa Time: ");
       Serial.print(uint8PosToLongInt(buf, 3, 7));
-      Serial.println(" DateHoursMinutes");
+      Serial.println("  DDHHMM");
       
       //Serial.println((char*)buf);
 //       Serial.print("RSSI: ");

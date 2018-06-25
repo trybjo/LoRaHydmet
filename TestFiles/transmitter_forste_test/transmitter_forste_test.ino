@@ -18,8 +18,8 @@ uint8_t data[1];
 #define RFM95_RST 3
 #define RFM95_INT 2
 
-int minutes = 30;
-int hours = 12;
+int minutes = 16;
+int hours = 15;
 int date = 22;
 
 
@@ -106,7 +106,7 @@ void setup()
   // The default transmitter power is 13dBm, using PA_BOOST.
   // If you are using RFM95/96/97/98 modules which uses the PA_BOOST transmitter pin, then 
   // you can set transmitter powers from 5 to 23 dBm:
-   rf95.setTxPower(23);
+   rf95.setTxPower(13);
    
 LoRa.setSpreadingFactor(spreadingFactor);
 LoRa.setSignalBandwidth(signalBandwidth);
@@ -115,7 +115,8 @@ LoRa.setCodingRate4(codingRateDenominator);
 }
 void loop()
 {
-  addToMinutes(600000);
+  //addToMinutes(600000);
+  
   Serial.print("Date, Hour, Minute: ");
   Serial.print(date);
   Serial.print(hours);
@@ -182,7 +183,9 @@ void loop()
   {
     Serial.println("No reply, is there a listener around?");
   }
-  delay(60000);
+  //delay(6000);
+  addToMinutes(600000);
+  delay(600000);
 }
 
  
