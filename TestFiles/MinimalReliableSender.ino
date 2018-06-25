@@ -1,4 +1,3 @@
-
 /*
  * Pinout from Arduino to peripherals:
  * GND  -> Humidity sensor pin 3 (from left, seen from side with holes)
@@ -70,7 +69,7 @@ RHReliableDatagram manager(lora, SENDER_ADDRESS);
 uint8_t packageNum; 
 // Don't put this on the stack:
 uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
-uint8_t memory[4][24]; // Memory that can store 4 packages of size 24
+uint8_t memory[4][14]; // Memory that can store 4 packages of size 14
 uint8_t packageMemory[4]; 
 uint8_t packageMemoryPointer;
 
@@ -166,42 +165,38 @@ void loop() {
 
   // Testing data measurements
   // Uint8_t [2] can hold values in range 0-65'536
-  uint8_t data[13];
+  // 1 + 3 + 3 + 2 + 2 + 3
+  uint8_t data[14];
 
   // Time data (3 bytes)
-  long int DDHHMM = getTime();
   // Depth data  (3 bytes)
-  long int depth = getDepth();
   // Humidity data (2 byte)
-  long int humidity = getHumidity();
   // Temp data (2 bytes)
-  long int temp = getTemp();
   // Pressure data (3 bytes)
-  long int pressure = getPressure();
+  
   // Position data (3 + 3 byte)
-  // 71.000 35.000
-//  long int Longditude  = getLonditude();
+//  long int Longditude  = getLongditude();
 //  long int Latitude = getLatitude(); 
 
-  fillLongIntToPos(temp, 2, 0, data);
-  fillLongIntToPos(humidity, 2, 2, data);
-  fillLongIntToPos(pressure, 3, 4, data);
-  fillLongIntToPos(depth, 3, 7, data);
-  fillLongIntToPos(DDHHMM, 3, 10, data);
-  // All data requiering 17 bytes of data
-  Serial.println(depth);
-  Serial.println(humidity);
+  // get() functions return long int
+  fillLongIntToPos(getTemp(), 2, 1, data);
+  fillLongIntToPos(getHumidity(), 2, 3, data);
+  fillLongIntToPos(getPressure(), 3, 5, data);
+  fillLongIntToPos(getDepth(), 3, 8, data);
+  fillLongIntToPos(getTime(), 3, 11, data);
+  // All data requiering 14 bytes of data
+
  
   
-
-  
+  // Adding packet number
+  fillLongIntToPos((long int) packageNum, 1, 0, data);
 
   
 
   
 //  uint8_t data[] = "Hello from the sender!"; 
-  uint8_t numberedData[sizeof(packageNum) + sizeof(data)];
-  addPackageNum(&numberedData[0], &data[0], sizeof(data));
+//  uint8_t numberedData[sizeof(packageNum) + sizeof(data)];
+//  addPackageNum(&numberedData[0], &data[0], sizeof(data));
   
   Serial.println("\nMessage generated: ");
   Serial.print((int)numberedData[0]); // Printing the first part of the message
@@ -314,11 +309,16 @@ long int getHumidity()
 
   return (long int) (am2320.readHumidity() * 100 ) ;
 }
+
+// Returns the time in DateDateHourHourMinuteMinute format. 
+// Not tested
 long int getTime(){
-  uint8_t timeValue[3]; // DDHHMM
-  uint8_t now.month();
-  return 001337;
+  DateTime now = rtc.now();
+  long int timeInt = (long int) now.minute() + (long int) now.day() * 100 + (long int) now.month() * 10000;
+  uint8_t timeValue[3];  
+  return fillLongIntToPos(timeInt, 3, 0, timeValue);
 }
+
 // Returns the depth of the sensor [mm]. 
 // The mapping values must be calibrated for the chosen resistor value.
 // 2 decimal presicion.
@@ -349,12 +349,12 @@ float floatMap(float x, float in_min, float in_max, float out_min, float out_max
 return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
-void addPackageNum(uint8_t* result, uint8_t* input, int sizeOfInput){
-  result[0] = packageNum;
-  for (int i=0; i< sizeOfInput; i++){
-    result[i+1] = input[i];
-  }
-}
+//void addPackageNum(uint8_t* result, uint8_t* input, int sizeOfInput){
+//  result[0] = packageNum;
+//  for (int i=0; i< sizeOfInput; i++){
+//    result[i+1] = input[i];
+//  }
+//}
 
 // counting package numbers 0-7 to try to use 3 bit at some time.
 void updatePackageNum(){
@@ -456,5 +456,4 @@ void printReceived(uint8_t* message, uint8_t from){
 }
 
 //////////// These functions take ~ 80 bytes /////////////
-
 
