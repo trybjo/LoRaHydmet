@@ -34,6 +34,10 @@
 #include <LoRa.h>
 #include <RH_RF95.h>
 
+#define RFM95_CS 10
+#define RFM95_RST 3
+#define RFM95_INT 2
+
 // SPI library easy use of SPI. 
 // MISO, MOIS and SCK hare handled automatically by the SPI-library. Chip select (CS)/Slave select (SS) must be set manually.
 // CS/SS pin can be any digital pin. The slave communicates with master when its CS pin is low (usually...).
@@ -41,6 +45,10 @@
 
 // Library to use I2C communucation.
 #include <Wire.h>
+
+// Library for time and date:
+#include "RTClib.h"
+RTC_DS3231 rtc;
 
 // Library that some of Adafruit's sensors uses.
 #include <Adafruit_Sensor.h>
@@ -50,7 +58,7 @@
 #define RECEIVER_ADDRESS 2
 
 // Set frequency [MHz]. The LoRa chip used here can operate at 868 MHz.
-#define LoRa_FREQ 868.0
+#define LoRa_FREQ 871.0
 
 // Singleton instance of the radio driver.
 RH_RF95 lora(LoRa_CS, LoRa_INT);
@@ -117,15 +125,27 @@ Adafruit_AM2320 am2320 = Adafruit_AM2320();
 
 
 void setup() {
+  pinMode(RFM95_RST, OUTPUT);
+  digitalWrite(RFM95_RST, HIGH);
+  
   Serial.begin(9600);
-  while (!Serial) ; // Wait for serial port to be available
-//  if (!manager.init())
-//  // Init failed
-//  delay(1000);
+  delay(100);
+
+  // manual reset
+  digitalWrite(RFM95_RST, LOW);
+  delay(10);
+  digitalWrite(RFM95_RST, HIGH);
+  delay(10);
   initializeLoRa();
   initializeTempAndPressure();
   initializeHumidity();
+  initializeTimer();
   
+//  if (!rf95.setFrequency(RF95_FREQ)) {
+//    Serial.println("setFrequency failed");
+//    while (1);
+//  }
+  // rf95.setTxPower(13);
   
   packageNum = 0;
   packageMemoryPointer = 0;
@@ -145,53 +165,41 @@ void fillLongIntToPos(long int inValue, int requiredSize, int startingPos, uint8
 void loop() {   
 
   // Testing data measurements
-  uint8_t totalData[17];
+  // Uint8_t [2] can hold values in range 0-65'536
+  uint8_t data[13];
 
-  // Depth data taking 2 bytes
+  // Time data (3 bytes)
+  long int DDHHMM = getTime();
+  // Depth data  (3 bytes)
   long int depth = getDepth();
-  // Humidity data taking 1 byte
+  // Humidity data (2 byte)
   long int humidity = getHumidity();
-  // Temp data taking 2 bytes
+  // Temp data (2 bytes)
   long int temp = getTemp();
-  // Pressure data taking 2 bytes
+  // Pressure data (3 bytes)
   long int pressure = getPressure();
-  // Position takes 6 + 6 digits = 12 digits
-  // 3 bytes + 3 bytes
+  // Position data (3 + 3 byte)
   // 71.000 35.000
 //  long int Longditude  = getLonditude();
-//  long int Latitude = getLatitude();
-  // Time + date taking 4 bytes? 
+//  long int Latitude = getLatitude(); 
 
-  fillLongIntToPos(depth, 2, 0, totalData);
-  fillLongIntToPos(humidity, 1, 2, totalData);
+  fillLongIntToPos(temp, 2, 0, data);
+  fillLongIntToPos(humidity, 2, 2, data);
+  fillLongIntToPos(pressure, 3, 4, data);
+  fillLongIntToPos(depth, 3, 7, data);
+  fillLongIntToPos(DDHHMM, 3, 10, data);
   // All data requiering 17 bytes of data
   Serial.println(depth);
   Serial.println(humidity);
-  uint8_t *vp = (uint8_t *)&depth;
-
-  Serial.println("Depth and humidity: ");
-  Serial.println((long int)totalData[0]); 
-  Serial.println((long int)totalData[1]); //*256);
-  Serial.println((long int)totalData[2]);
-  
-//  uint8_t a[4];
-//  a[0] = vp[0];
-//  a[1] = vp[1];
-//  a[2] = vp[2];
-//  a[3] = vp[3];
-
-  // Uint8_t [2] can hold values in range 0-65'536
-//  long int result = (long int)vp[0]+ (long int)vp[1]*256 + (long int)vp[2]*256*256 ;
-//  Serial.println(result);
-//  Serial.println(vp[0]);
-//  Serial.println(vp[1]);
-//  Serial.println(vp[2]);
+ 
   
 
   
 
   
-  uint8_t data[] = "Hello from the sender!"; 
+
+  
+//  uint8_t data[] = "Hello from the sender!"; 
   uint8_t numberedData[sizeof(packageNum) + sizeof(data)];
   addPackageNum(&numberedData[0], &data[0], sizeof(data));
   
@@ -245,6 +253,21 @@ void initializeTempAndPressure()
   BMP.begin();
 }
 
+void initializeTimer(){
+  if (! rtc.begin()) {
+    Serial.println("Couldn't find RTC");
+    while (1);
+  }
+  if (rtc.lostPower()) {
+    Serial.println("RTC lost power, lets set the time!");
+    // following line sets the RTC to the date & time this sketch was compiled
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    // This line sets the RTC with an explicit date & time, for example to set
+    // January 21, 2014 at 3am you would call:
+    // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
+  }
+}
+
 // Initialize LoRa.
 void initializeLoRa()
 {
@@ -252,7 +275,8 @@ void initializeLoRa()
   pinMode(LoRa_RST, OUTPUT);
 
   // Manual reset of LoRa module
-  digitalWrite(LoRa_RST, HIGH); delay(100);
+  digitalWrite(LoRa_RST, HIGH); 
+  delay(100);
   digitalWrite(LoRa_RST, LOW);
   delay(10);
   digitalWrite(LoRa_RST, HIGH);
@@ -271,7 +295,7 @@ void initializeLoRa()
   
   // Set transmitter power, value from 7-23 (23 = 20 dBm). 13 dBm is default. 
   // Can go above this using PA_BOOST, which RFM9x has.
-  lora.setTxPower(23);
+  lora.setTxPower(13);
 
   // Set spreding factor, bandwidth and coding rate. 
   // See LoRa #define in top of code for description and usage.
@@ -287,32 +311,32 @@ void initializeLoRa()
 // Returns the humidity [%].
 long int getHumidity()
 {
-  return 130;
-//  return 12120;
-//  return am2320.readHumidity();
-}
 
+  return (long int) (am2320.readHumidity() * 100 ) ;
+}
+long int getTime(){
+  uint8_t timeValue[3]; // DDHHMM
+  uint8_t now.month();
+  return 001337;
+}
 // Returns the depth of the sensor [mm]. 
 // The mapping values must be calibrated for the chosen resistor value.
+// 2 decimal presicion.
 long int getDepth()
 {
-  //return 65535;
-  return 55000;
-//  return floatMap(analogRead(A0), 411,647, 0,213);
+  return (long int) (floatMap(analogRead(A0), 411,647, 0,213) * 100);
 }
 
-// Returns temperature [*C].
+// Returns temperature [*C] with two decimals precision.
 long int getTemp()
 {
-  return 23230;
-//  return BMP.readTemperature();
+  return (long int) (BMP.readTemperature() * 100);
 }
 
 // Returns pressure [Pa].
 long int getPressure()
 {
-  return 45450;
-//  return BMP.readPressure();
+  return (long int) BMP.readPressure();
 }
 
 

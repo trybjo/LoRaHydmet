@@ -2,24 +2,58 @@
 #include <RHReliableDatagram.h>
 #include <RH_RF95.h>
 #include <SPI.h>
+#include <LoRa.h>
 
 #define SENDER_ADDRESS 1
 #define RECEIVER_ADDRESS 2
 
-RH_RF95 driver;
+#define LoRa_CS 10
+#define LoRa_RST 3
+#define LoRa_INT 2
+#define LoRa_FREQ 871.0
+
+RH_RF95 driver(LoRa_CS, LoRa_INT);
 RHReliableDatagram manager(driver, RECEIVER_ADDRESS); // Instanciate this object with address.
 uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
 uint8_t packageMemory[4];
 uint8_t packageMemoryPointer;
 uint8_t packageNum;
 
+// Set spreading factor, 6 ~ 12. 
+// LoRa is a Chirp Spread Spectrum (CSS) modulation. This setting determines the number of chirps per bit of data.
+// At the highest value (SF 12), the link has higher range and is more robust, but the data rate is lowered significantly. 
+// The lowest value (SF 6) is a special case designed for the highest possible data rate. In this mode however, the length of the packet has to be known in advance. Also, CRC check is disabled.
+#define spreadingFactor 12
+
+// Set bandwidth, option: 7800,10400,15600,20800,31250,41700,62500,125000,250000,500000 [Hz].
+// Lower BandWidth for longer distance. Semtech recommends to keep it above or equal to 62.5 kHz to be compatible with the clock speed.
+#define signalBandwidth 125E3
+
+// Set coding rate, 5 ~ 8 (values are actually 4/x).
+// LoRa modem always performs forward error correction. The amount of these error checks is expressed by the coding rate. 
+// The lowest value (CR 4/5) results in higher data rate and less robust link, the highest value (CR 4/8) provides more robust link at the expense of lowering data rate.
+#define codingRateDenominator 8
+
 
 
 void setup() {
   Serial.begin(9600);
+  delay(100);
+  
+  digitalWrite(LoRa_RST, LOW);
+  delay(10);
+  pinMode(LoRa_RST, OUTPUT);
+  delay(10);
+  digitalWrite(LoRa_RST, HIGH);
   while (!Serial) ; // Wait for serial port to be available
   if (!manager.init())
   Serial.println("init failed");
+
+  driver.setFrequency(LoRa_FREQ);
+  driver.setTxPower(13, false);
+  LoRa.setSignalBandwidth(signalBandwidth);
+  LoRa.setCodingRate4(codingRateDenominator);
+  
   for (int i = 0; i < 4; i++){
     packageMemory[i] = -1;
   }
@@ -72,7 +106,20 @@ void loop() {
     while (receiving){
       receiving = receive(&duplicate, buf, &bufLen, &from, timeout);
     }
-
+    Serial.print("Temp: ");
+    //uint8PosToFloat(uint8_t* input, int usedSize, int startPos, int decimals)
+    Serial.print(uint8PosToFloat(buf, 2, 0, 2));
+    
+    Serial.print("*C Humidity: ");
+    Serial.print(uint8PosToFloat(buf, 2, 2, 2));
+    Serial.print("% Pressure: ");
+    Serial.print(uint8PosToLongInt(buf, 3, 4));
+    Serial.print("Pa Debth: ");
+    Serial.print(uint8PosToLongFloat(buf, 3, 7, 2));
+    Serial.print(" Pa Time: ");
+    Serial.print(uint8PosToLongInt(buf, 3, 10));
+    Serial.println(" DDHHMM");
+      
     // After successful receive(s), send a message: 
     if (receiveSuccess){
       uint8_t data[] = "And hello back to you";
@@ -94,6 +141,22 @@ void loop() {
 void updatePackageNum(){
   if (packageNum >= 7){ packageNum = 0;} 
   else packageNum ++;
+}
+
+float uint8PosToFloat(uint8_t* input, int usedSize, int startPos, int decimals){
+  long int _temp = 0;
+  for (int i = startPos; i< startPos + usedSize; i++){
+    _temp += (long int)input[i] * toPowerOf(256, i-startPos); 
+  }
+  return (float)_temp/toPowerOf(10, decimals);  
+}
+
+long int uint8PosToLongInt(uint8_t* input, int usedSize, int startPos){
+  long int _temp = 0;
+  for (int i = startPos; i< startPos + usedSize; i++){
+    _temp += (long int)input[i] * toPowerOf(256, i-startPos); 
+  }
+  return _temp;  
 }
 
 void addPackageNum(uint8_t* result, uint8_t* input, int sizeOfInput){
