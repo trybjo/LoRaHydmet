@@ -106,18 +106,19 @@ void loop() {
     while (receiving){
       receiving = receive(&duplicate, buf, &bufLen, &from, timeout);
     }
+    Serial.print("Packet: ");
+    Serial.print(uint8PosToLongInt(buf, 1, 1));
     Serial.print("Temp: ");
     //uint8PosToFloat(uint8_t* input, int usedSize, int startPos, int decimals)
-    Serial.print(uint8PosToFloat(buf, 2, 0, 2));
-    
+    Serial.print(uint8PosToFloat(buf, 2, 1, 2));
     Serial.print("*C Humidity: ");
-    Serial.print(uint8PosToFloat(buf, 2, 2, 2));
+    Serial.print(uint8PosToFloat(buf, 2, 3, 2));
     Serial.print("% Pressure: ");
-    Serial.print(uint8PosToLongInt(buf, 3, 4));
+    Serial.print(uint8PosToLongInt(buf, 3, 5));
     Serial.print("Pa Debth: ");
-    Serial.print(uint8PosToLongFloat(buf, 3, 7, 2));
+    Serial.print(uint8PosToLongFloat(buf, 3, 8, 2));
     Serial.print(" Pa Time: ");
-    Serial.print(uint8PosToLongInt(buf, 3, 10));
+    Serial.print(uint8PosToLongInt(buf, 3, 11));
     Serial.println(" DDHHMM");
       
     // After successful receive(s), send a message: 
