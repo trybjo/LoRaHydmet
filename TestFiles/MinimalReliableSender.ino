@@ -14,9 +14,9 @@
  * D8   -> Temp&Press CS
  * 
  * D10  -> LoRa CS
- * D11  -> Temp&Press SDI + LoRa MOSI
- * D12  -> Temp&Press SDO + LoRa MISO
- * D13  -> Temp&Press SCK + LoRa SCK
+ * D11  -> LoRa MOSI
+ * D12  -> LoRa MISO
+ * D13  -> LoRa SCK
  * 
  * 
  * SDA  -> Humidity sensor pin 2 (from left, seen from side with holes)
@@ -162,7 +162,6 @@ void fillLongIntToPos(long int inValue, int requiredSize, int startingPos, uint8
 }
 
 void loop() {   
-
   // Testing data measurements
   // Uint8_t [2] can hold values in range 0-65'536
   // 1 + 3 + 3 + 2 + 2 + 3
@@ -186,7 +185,8 @@ void loop() {
   fillLongIntToPos(getTime(), 3, 11, data);
   // All data requiering 14 bytes of data
 
- 
+ Serial.print("Time: ");
+ Serial.println(getTime());
   
   // Adding packet number
   fillLongIntToPos((long int) packageNum, 1, 0, data);
@@ -199,12 +199,11 @@ void loop() {
 //  addPackageNum(&numberedData[0], &data[0], sizeof(data));
   
   Serial.println("\nMessage generated: ");
-  Serial.print((int)numberedData[0]); // Printing the first part of the message
-  Serial.println((char*)&numberedData[1]); // Printing the text value
+  Serial.print((int)data[0]); // Printing the first part of the message
   
-  if (!manager.sendtoWait(numberedData, sizeof(numberedData), RECEIVER_ADDRESS)){     
+  if (!manager.sendtoWait(data, sizeof(data), RECEIVER_ADDRESS)){     
     // Send unsuccessful       
-    writeToMemory(numberedData, sizeof(numberedData));   
+    writeToMemory(data, sizeof(data));   
     printFullDataMessage();   
   }
   sendFromMemory(); 
@@ -253,6 +252,7 @@ void initializeTimer(){
     Serial.println("Couldn't find RTC");
     while (1);
   }
+  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   if (rtc.lostPower()) {
     Serial.println("RTC lost power, lets set the time!");
     // following line sets the RTC to the date & time this sketch was compiled
@@ -310,13 +310,22 @@ long int getHumidity()
   return (long int) (am2320.readHumidity() * 100 ) ;
 }
 
-// Returns the time in DateDateHourHourMinuteMinute format. 
+// Returns the time in MonthMonthDateDateYearYearHourHourMinuteMinute format, 10 digits
+// Maximum value: 1'231'992'359
+// Long can hold: 2'147'483'647
 // Not tested
 long int getTime(){
   DateTime now = rtc.now();
-  long int timeInt = (long int) now.minute() + (long int) now.day() * 100 + (long int) now.month() * 10000;
-  uint8_t timeValue[3];  
-  return fillLongIntToPos(timeInt, 3, 0, timeValue);
+  
+
+  // year = 2018, year%100 = 18
+  long int timeInt = (long)now.month() * 100000000 + (long)now.day()*1000000 +((long)now.year()%100)*10000;
+  timeInt += (long)now.hour()*100 + (long) now.minute();
+//  uint8_t timeValue[3];  
+//  return fillLongIntToPos(timeInt, 3, 0, timeValue);
+  Serial.print("Time: ");
+  Serial.println(timeInt);
+  return timeInt; 
 }
 
 // Returns the depth of the sensor [mm]. 
@@ -456,4 +465,3 @@ void printReceived(uint8_t* message, uint8_t from){
 }
 
 //////////// These functions take ~ 80 bytes /////////////
-
