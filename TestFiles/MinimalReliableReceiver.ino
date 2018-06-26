@@ -77,7 +77,7 @@ bool receive(bool* duplicate, uint8_t* message, uint8_t* bufLen, uint8_t* from, 
     if (!packageInMemory((int)buf[0])){
       *duplicate = false;
       updatePackageMemory((int)buf[0]);
-      printReceived(&buf[0], from[0]);
+//      printReceived(&buf[0], from[0]);
     }
     else {
       Serial.println("Received duplicate");
@@ -107,7 +107,7 @@ void loop() {
       receiving = receive(&duplicate, buf, &bufLen, &from, timeout);
     }
     Serial.print("Packet: ");
-    Serial.print(uint8PosToLongInt(buf, 1, 1));
+    Serial.print(uint8PosToLongInt(buf, 1, 0));
     Serial.print("Temp: ");
     //uint8PosToFloat(uint8_t* input, int usedSize, int startPos, int decimals)
     Serial.print(uint8PosToFloat(buf, 2, 1, 2));
@@ -116,10 +116,9 @@ void loop() {
     Serial.print("% Pressure: ");
     Serial.print(uint8PosToLongInt(buf, 3, 5));
     Serial.print("Pa Debth: ");
-    Serial.print(uint8PosToLongFloat(buf, 3, 8, 2));
+    Serial.print(uint8PosToFloat(buf, 3, 8, 2));
     Serial.print(" Pa Time: ");
-    Serial.print(uint8PosToLongInt(buf, 3, 11));
-    Serial.println(" DDHHMM");
+    Serial.println(uint8PosToLongInt(buf, 4, 11));
       
     // After successful receive(s), send a message: 
     if (receiveSuccess){
@@ -150,6 +149,19 @@ float uint8PosToFloat(uint8_t* input, int usedSize, int startPos, int decimals){
     _temp += (long int)input[i] * toPowerOf(256, i-startPos); 
   }
   return (float)_temp/toPowerOf(10, decimals);  
+}
+
+long int toPowerOf(int input, int power){
+//  if (power == 0){
+//    return 1;
+//  }
+//  else{
+    long int temp = 1;
+    for (int i = 0; i < power; i++){
+      temp *= input;
+    }
+    return temp;
+//  }  
 }
 
 long int uint8PosToLongInt(uint8_t* input, int usedSize, int startPos){
@@ -192,4 +204,3 @@ void printReceived(uint8_t* message, uint8_t from){
   Serial.print((int)message[0]);
   Serial.println((char*)&message[1]);  
 }
-
