@@ -1,4 +1,3 @@
-
 #include <RHReliableDatagram.h>
 #include <RH_RF95.h>
 #include <SPI.h>
@@ -47,7 +46,7 @@ void setup() {
   digitalWrite(LoRa_RST, HIGH);
   while (!Serial) ; // Wait for serial port to be available
   if (!manager.init())
-  Serial.println("init failed");
+  Serial.println(F("init failed"));
 
   driver.setFrequency(LoRa_FREQ);
   driver.setTxPower(13, false);
@@ -80,7 +79,7 @@ bool receive(bool* duplicate, uint8_t* message, uint8_t* bufLen, uint8_t* from, 
 //      printReceived(&buf[0], from[0]);
     }
     else {
-      Serial.println("Received duplicate");
+      Serial.println(F("Received duplicate"));
       *duplicate = true;
     }
     return true;
@@ -94,22 +93,22 @@ bool receive(bool* duplicate, uint8_t* message, uint8_t* bufLen, uint8_t* from, 
 WriteDataToSerial(uint8_t* message){
   // Signal strength:
     Serial.print(driver.lastRssi(), DEC);
-    Serial.print(" , ");
+    Serial.print(F(" , "));
     // Packet number:
     Serial.print(uint8PosToLongInt(message, 1, 0));
-    Serial.print(" , ");
+    Serial.print(F(" , "));
     // Temperature:    
     Serial.print(uint8PosToFloat(message, 2, 1, 2));
-    Serial.print(" , ");
+    Serial.print(F(" , "));
     // Humidity:
     Serial.print(uint8PosToFloat(message, 2, 3, 2));
-    Serial.print(" , ");
+    Serial.print(F(" , "));
     // Pressure:
     Serial.print(uint8PosToLongInt(message, 3, 5));
-    Serial.print(" , ");
+    Serial.print(F(" , "));
     // Debth:
     Serial.print(uint8PosToFloat(message, 3, 8, 2));
-    Serial.print(" , ");
+    Serial.print(F(" , "));
     // Time: 
     Serial.println(uint8PosToLongInt(message, 4, 11));
 }
@@ -139,7 +138,7 @@ void loop() {
       
     // After successful receive(s), send a message: 
     if (receiveSuccess){
-      uint8_t data[] = "And hello back to you";
+      uint8_t data[] = F("And hello back to you");
       uint8_t numberedResponse[sizeof(packageNum) + sizeof(data)];
       addPackageNum(&numberedResponse[0], &data[0], sizeof(data));
       
@@ -147,7 +146,7 @@ void loop() {
         // Serial.println("Sending failed");
       }
       else {
-        // Serial.print("Sending successful: ");
+        // Serial.print(F("Sending successful: "));
         // Serial.print((int)numberedResponse[0]);
         // Serial.println((char*)&numberedResponse[1]);
         updatePackageNum();
@@ -215,9 +214,9 @@ int packageInMemory(int package){
 }
 
 void printReceived(uint8_t* message, uint8_t from){
-  Serial.print("Received message from: ");
+  Serial.print(F("Received message from: "));
   Serial.print(from, HEX);
-  Serial.print(" : ");
+  Serial.print(F(" : "));
   Serial.print((int)message[0]);
   Serial.println((char*)&message[1]);  
 }
