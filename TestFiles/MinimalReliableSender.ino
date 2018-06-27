@@ -14,7 +14,7 @@
  * D8   -> Temp&Press CS
  * 
  * D10  -> LoRa CS
- * D11  -> LoRa MOSI
+  * D11  -> LoRa MOSI
  * D12  -> LoRa MISO
  * D13  -> LoRa SCK
  * 
@@ -69,7 +69,7 @@ RHReliableDatagram manager(lora, SENDER_ADDRESS);
 uint8_t packageNum; 
 // Don't put this on the stack:
 uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
-uint8_t memory[4][14]; // Memory that can store 4 packages of size 14
+uint8_t memory[4][15]; // Memory that can store 4 packages of size 14
 uint8_t packageMemory[4]; 
 uint8_t packageMemoryPointer;
 
@@ -117,8 +117,7 @@ Adafruit_AM2320 am2320 = Adafruit_AM2320();
 // Water level senor
 
 // The water level sensor don't need any preparation
-// BUT THE MEASURING RANGE MUST BE FIGURED OUT. THE RESISTOR VALUE AND THEREFORE THE MAPPING VALUES MUST BE CHOSEN THEREAFTER.
-// Higher resistor value -> higher resolution but lower measuring range.
+// BUT THE MEASURING RANGE MUST BE FIGURED OUT. THE RESISTOR VALUE AND THEREFORE THE MAPPING VALUES MUST BE CHOSEN THEREAFTER.// Higher resistor value -> higher resolution but lower measuring range.
 // The microcontroller can be damaged if the resistor value is too high and the sensor is too deep in the water.
 // Max depth -> 20mA. Max voltage to microcontroller = 5V. V=RI -> R=250 ohm for max depth. Higher resistor values can be used if only lower water levels are needed.
 
@@ -130,8 +129,7 @@ void setup() {
   Serial.begin(9600);
   delay(100);
 
-  // manual reset
-  digitalWrite(RFM95_RST, LOW);
+  // manual reset  digitalWrite(RFM95_RST, LOW);
   delay(10);
   digitalWrite(RFM95_RST, HIGH);
   delay(10);
@@ -164,10 +162,10 @@ void fillLongIntToPos(long int inValue, int requiredSize, int startingPos, uint8
 void loop() {   
   // Testing data measurements
   // Uint8_t [2] can hold values in range 0-65'536
-  // 1 + 3 + 3 + 2 + 2 + 3
-  uint8_t data[14];
+  // 1 + 4 + 3 + 2 + 2 + 3
+  uint8_t data[15];
 
-  // Time data (3 bytes)
+  // Time data (4 bytes)
   // Depth data  (3 bytes)
   // Humidity data (2 byte)
   // Temp data (2 bytes)
@@ -182,8 +180,8 @@ void loop() {
   fillLongIntToPos(getHumidity(), 2, 3, data);
   fillLongIntToPos(getPressure(), 3, 5, data);
   fillLongIntToPos(getDepth(), 3, 8, data);
-  fillLongIntToPos(getTime(), 3, 11, data);
-  // All data requiering 14 bytes of data
+  fillLongIntToPos(getTime(), 4, 11, data);
+  // All data requiering 15 bytes of data
 
  Serial.print("Time: ");
  Serial.println(getTime());
