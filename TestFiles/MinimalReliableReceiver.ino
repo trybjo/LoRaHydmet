@@ -92,27 +92,78 @@ bool receive(bool* duplicate, uint8_t* message, uint8_t* bufLen, uint8_t* from, 
 
 WriteDataToSerial(uint8_t* message){
   // Signal strength:
-    Serial.print(driver.lastRssi(), DEC);
-    Serial.print(F(" , "));
-    // Packet number:
-    Serial.print(uint8PosToLongInt(message, 1, 0));
-    Serial.print(F(" , "));
-    // Temperature:    
-    Serial.print(uint8PosToFloat(message, 2, 1, 2));
-    Serial.print(F(" , "));
-    // Humidity:
-    Serial.print(uint8PosToFloat(message, 2, 3, 2));
-    Serial.print(F(" , "));
-    // Pressure:
-    Serial.print(uint8PosToLongInt(message, 3, 5));
-    Serial.print(F(" , "));
-    // Debth:
-    Serial.print(uint8PosToFloat(message, 3, 8, 2));
-    Serial.print(F(" , "));
-    // Time: 
-    Serial.println(uint8PosToLongInt(message, 4, 11));
+  Serial.print(driver.lastRssi(), DEC);
+  Serial.print(F(" , "));
+  // Packet number:
+  Serial.print(uint8PosToLongInt(message, 1, 0));
+  Serial.print(F(" , "));
+  // Temperature:    
+  Serial.print(uint8PosToFloat(message, 2, 1, 2));
+  Serial.print(F(" , "));
+  // Humidity:
+  Serial.print(uint8PosToFloat(message, 2, 3, 2));
+  Serial.print(F(" , "));
+  // Pressure:
+  Serial.print(uint8PosToLongInt(message, 3, 5));
+  Serial.print(F(" , "));
+  // Debth:
+  Serial.print(uint8PosToFloat(message, 3, 8, 2));
+  Serial.print(F(" , "));
+  // Time: 
+  Serial.println(uint8PosToLongInt(message, 4, 11));
+  
+  /*
+  Serial.print(driver.lastRssi(), DEC); // THis one need to be chagned still
+  Serial.print(F(" , "));
+  // Packet number:
+  sPrintData(message, 1, 0, 0);
+  Serial.print(F(" , "));
+  // Temperature:    
+  sPrintData(message, 2, 1, 2);
+  Serial.print(F(" , "));
+  // Humidity:
+  sPrintData(message, 2, 3, 2);
+  Serial.print(F(" , "));
+  // Pressure:
+  sPrintData(message, 3, 5, 0);
+  Serial.print(F(" , "));
+  // Debth:
+  sPrintData(message, 3, 8, 2));
+  Serial.print(F(" , "));
+  // Time: 
+  sPrintData(message, 4, 11, 0);
+  */
 }
 
+// This function aims to save SRAM by not using Serial.print(float)
+// Replaces uint8PosToLongInt and uint8PosToFloat, and the Serial calls.
+
+// Decoding uint8_t* to integer or decimal values and writing to serial.
+// When 'decimals' == 0, the integer value will be printed.
+void sPrintData(uint8_t* input, int usedSize, int startPos, int decimals){
+  long int _temp = 0;
+  for (int i = startPos; i< startPos + usedSize; i++){
+    _temp += (long int)input[i] * toPowerOf(256, i-startPos); 
+  }
+  if (!decimals){
+    Serial.print(_temp);
+  }
+  else{
+    tenPower = toPowerOf(10,decimals);
+    Serial.print(_temp/tenPower); // Integer value
+    Serial.print(F("."));
+    Serial.print(_temp - tenPower*(_temp/tenPower)); // Decimals
+  }
+}
+
+
+float uint8PosToFloat(uint8_t* input, int usedSize, int startPos, int decimals){
+  long int _temp = 0;
+  for (int i = startPos; i< startPos + usedSize; i++){
+    _temp += (long int)input[i] * toPowerOf(256, i-startPos); 
+  }
+  return (float)_temp/toPowerOf(10, decimals);  
+}
 
 void loop() {
   if (manager.available()){
