@@ -91,34 +91,51 @@ bool receive(bool* duplicate, uint8_t* message, uint8_t* bufLen, uint8_t* from, 
   }
 }
 
+WriteDataToSerial(uint8_t* message){
+  // Signal strength:
+    Serial.print(driver.lastRssi(), DEC);
+    Serial.print(" , ");
+    // Packet number:
+    Serial.print(uint8PosToLongInt(message, 1, 0));
+    Serial.print(" , ");
+    // Temperature:    
+    Serial.print(uint8PosToFloat(message, 2, 1, 2));
+    Serial.print(" , ");
+    // Humidity:
+    Serial.print(uint8PosToFloat(message, 2, 3, 2));
+    Serial.print(" , ");
+    // Pressure:
+    Serial.print(uint8PosToLongInt(message, 3, 5));
+    Serial.print(" , ");
+    // Debth:
+    Serial.print(uint8PosToFloat(message, 3, 8, 2));
+    Serial.print(" , ");
+    // Time: 
+    Serial.println(uint8PosToLongInt(message, 4, 11));
+}
+
 
 void loop() {
   if (manager.available()){
-    Serial.println();
+    // Serial.println();
     uint8_t bufLen = sizeof(buf); // Needs to be here to convert to uint8_t
     uint8_t from;
     bool duplicate;
+    
+    // We receive, and wait forever to receive it
     bool receiveSuccess = receive(&duplicate, buf, &bufLen, &from, -1);
-
-    // After receiving one message, there may be more incoming
-    bool receiving = true; // 1 when receiving
-    int timeout = 1000; // ms
+    WriteDataToSerial(buf);
+    // After receiving one message, there may be more incoming because of repeaters and buffers
+    // We wait for 1 sec, between each receive before we give up 
+    bool receiving = true;
+    int timeout = 1000;
     while (receiving){
       receiving = receive(&duplicate, buf, &bufLen, &from, timeout);
+      if receiving{
+        WriteDataToSerial(buf);
+      }
     }
-    Serial.print("Packet: ");
-    Serial.print(uint8PosToLongInt(buf, 1, 0));
-    Serial.print("Temp: ");
-    //uint8PosToFloat(uint8_t* input, int usedSize, int startPos, int decimals)
-    Serial.print(uint8PosToFloat(buf, 2, 1, 2));
-    Serial.print("*C Humidity: ");
-    Serial.print(uint8PosToFloat(buf, 2, 3, 2));
-    Serial.print("% Pressure: ");
-    Serial.print(uint8PosToLongInt(buf, 3, 5));
-    Serial.print("Pa Debth: ");
-    Serial.print(uint8PosToFloat(buf, 3, 8, 2));
-    Serial.print(" Pa Time: ");
-    Serial.println(uint8PosToLongInt(buf, 4, 11));
+    
       
     // After successful receive(s), send a message: 
     if (receiveSuccess){
@@ -127,12 +144,12 @@ void loop() {
       addPackageNum(&numberedResponse[0], &data[0], sizeof(data));
       
       if (!manager.sendtoWait(numberedResponse, sizeof(numberedResponse), from)){
-        Serial.println("Sending failed");
+        // Serial.println("Sending failed");
       }
       else {
-        Serial.print("Sending successful: ");
-        Serial.print((int)numberedResponse[0]);
-        Serial.println((char*)&numberedResponse[1]);
+        // Serial.print("Sending successful: ");
+        // Serial.print((int)numberedResponse[0]);
+        // Serial.println((char*)&numberedResponse[1]);
         updatePackageNum();
       }
     }
