@@ -183,7 +183,7 @@ void loop() {
   fillLongIntToPos(getTime(), 4, 11, data);
   // All data requiering 15 bytes of data
 
- Serial.print("Time: ");
+ Serial.print(F("Time: "));
  Serial.println(getTime());
   
   // Adding packet number
@@ -196,7 +196,7 @@ void loop() {
 //  uint8_t numberedData[sizeof(packageNum) + sizeof(data)];
 //  addPackageNum(&numberedData[0], &data[0], sizeof(data));
   
-  Serial.println("\nMessage generated: ");
+  Serial.println(F("\nMessage generated: "));
   Serial.print((int)data[0]); // Printing the first part of the message
   
   if (!manager.sendtoWait(data, sizeof(data), RECEIVER_ADDRESS)){     
@@ -221,7 +221,7 @@ void loop() {
         updatePackageMemory((int)buf[0]);
         printReceived(&buf[0], from);
       }
-      else{Serial.println("Received duplicate");};      
+      else{Serial.println(F("Received duplicate"));};      
     }
     else receiving = false;
   }
@@ -247,7 +247,7 @@ void initializeTempAndPressure()
 
 void initializeTimer(){
   if (! rtc.begin()) {
-    Serial.println("Couldn't find RTC");
+    Serial.println(F("Couldn't find RTC"));
     while (1);
   }
   rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
@@ -321,7 +321,7 @@ long int getTime(){
   timeInt += (long)now.hour()*100 + (long) now.minute();
 //  uint8_t timeValue[3];  
 //  return fillLongIntToPos(timeInt, 3, 0, timeValue);
-  Serial.print("Time: ");
+  Serial.print(F("Time: "));
   Serial.println(timeInt);
   return timeInt; 
 }
@@ -382,10 +382,10 @@ void sendFromMemory(){ // trying to send all elements of memory
     if (memory[i][1] != (char)0){   
       // Only send data that exists     
       if (!manager.sendtoWait(&memory[i][0], sizeof(memory[i]), RECEIVER_ADDRESS)){ // Trying to send from memory
-        Serial.println("Send from memory unsuccessful");
+        Serial.println(F("Send from memory unsuccessful"));
       }
       else{
-        Serial.print("Send from memory success with size: ");
+        Serial.print(F("Send from memory success with size: "));
         Serial.println(sizeof(memory[i]));      
         deleteFromMemory(i);        
       }       
@@ -403,7 +403,7 @@ void deleteFromMemory(int deletePosition){
 int findEmptyMemory(){    
   for (int i = 0; i < 4; i++){ // Assuming memory has size of 4
     if (memory[i][1] == 0){
-      Serial.print("Found empty memory at position: ");
+      Serial.print(F("Found empty memory at position: "));
       Serial.println(i);      
       return i;
     }
@@ -444,7 +444,7 @@ int packageInMemory(int package){
 void printFullDataMessage(){
   for (int i = 0; i < 4 ; i++){
     if (memory[i][1] != (char)0){
-      Serial.print("Memory: ");
+      Serial.print(F("Memory: "));
       Serial.print(i);
       Serial.print(" : ");
       Serial.print((int)memory[i][0]); 
@@ -455,10 +455,10 @@ void printFullDataMessage(){
 }
 
 void printReceived(uint8_t* message, uint8_t from){
-  Serial.print("Received a message: ");
+  Serial.print(F("Received a message: "));
   Serial.print((int)message[0]);
   Serial.println((char*)&message[1]);
-  Serial.print("Sender of the message was : 0x");
+  Serial.print(F("Sender of the message was : 0x"));
   Serial.println(from, HEX);
 }
 
