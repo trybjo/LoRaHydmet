@@ -9,7 +9,7 @@
 #define LoRa_CS 10
 #define LoRa_RST 3
 #define LoRa_INT 2
-#define LoRa_FREQ 871.0
+#define LoRa_FREQ 870.1
 
 RH_RF95 driver(LoRa_CS, LoRa_INT);
 RHReliableDatagram manager(driver, RECEIVER_ADDRESS); // Instanciate this object with address.
@@ -49,7 +49,7 @@ void setup() {
   Serial.println(F("init failed"));
 
   driver.setFrequency(LoRa_FREQ);
-  driver.setTxPower(13, false);
+  driver.setTxPower(23, false);
   LoRa.setSignalBandwidth(signalBandwidth);
   LoRa.setCodingRate4(codingRateDenominator);
   
@@ -58,6 +58,51 @@ void setup() {
   }
   packageNum = 0;
   packageMemoryPointer = 0;
+  //Serial.println(F("Signal Strength, Packet number, Temp, Humidity, Pressure, Debth, Time"));
+}
+
+
+
+void loop() {
+  if (manager.available()){
+    // Serial.println();
+    uint8_t bufLen = sizeof(buf); // Needs to be here to convert to uint8_t
+    uint8_t from;
+    bool duplicate;
+    
+    // We receive, and wait forever to receive it
+    bool receiveSuccess = receive(&duplicate, buf, &bufLen, &from, -1);
+    // The variable 'duplicate' is not in use yet.
+    writeDataToSerial(buf);
+    // After receiving one message, there may be more incoming because of repeaters and buffers
+    // We wait for 1 sec, between each receive before we give up 
+    bool receiving = true;
+    int timeout = 1000;
+    while (receiving){
+      receiving = receive(&duplicate, buf, &bufLen, &from, timeout);
+      if (receiving){
+        writeDataToSerial(buf);
+      }
+    }
+    
+      
+    // After successful receive(s), send a message: 
+    if (receiveSuccess){
+      uint8_t data[] = "And hello back to you";
+      uint8_t numberedResponse[sizeof(packageNum) + sizeof(data)];
+      addPackageNum(&numberedResponse[0], &data[0], sizeof(data));
+      
+      if (!manager.sendtoWait(numberedResponse, sizeof(numberedResponse), from)){
+        // Serial.println("Sending failed");
+      }
+      else {
+        // Serial.print(F("Sending successful: "));
+        // Serial.print((int)numberedResponse[0]);
+        // Serial.println((char*)&numberedResponse[1]);
+        updatePackageNum();
+      }
+    }
+  }
 }
 
 // The function calls receive function with or without timeout
@@ -90,49 +135,30 @@ bool receive(bool* duplicate, uint8_t* message, uint8_t* bufLen, uint8_t* from, 
   }
 }
 
-WriteDataToSerial(uint8_t* message){
-  // Signal strength:
-  Serial.print(driver.lastRssi(), DEC);
-  Serial.print(F(" , "));
-  // Packet number:
-  Serial.print(uint8PosToLongInt(message, 1, 0));
-  Serial.print(F(" , "));
-  // Temperature:    
-  Serial.print(uint8PosToFloat(message, 2, 1, 2));
-  Serial.print(F(" , "));
-  // Humidity:
-  Serial.print(uint8PosToFloat(message, 2, 3, 2));
-  Serial.print(F(" , "));
-  // Pressure:
-  Serial.print(uint8PosToLongInt(message, 3, 5));
-  Serial.print(F(" , "));
-  // Debth:
-  Serial.print(uint8PosToFloat(message, 3, 8, 2));
-  Serial.print(F(" , "));
-  // Time: 
-  Serial.println(uint8PosToLongInt(message, 4, 11));
+void writeDataToSerial(uint8_t* message){
+  //sPrintData(input, usedSize, startPos, decimals);
   
-  /*
-  Serial.print(driver.lastRssi(), DEC); // THis one need to be chagned still
-  Serial.print(F(" , "));
+  // Signal strength dBm
+  Serial.print((int)driver.lastRssi()); // THis one need to be chagned still
+  Serial.print(F(","));
   // Packet number:
   sPrintData(message, 1, 0, 0);
-  Serial.print(F(" , "));
+  Serial.print(F(","));
   // Temperature:    
   sPrintData(message, 2, 1, 2);
-  Serial.print(F(" , "));
+  Serial.print(F(","));
   // Humidity:
-  sPrintData(message, 2, 3, 2);
-  Serial.print(F(" , "));
+  sPrintData(message, 2, 3, 1);
+  Serial.print(F(","));
   // Pressure:
   sPrintData(message, 3, 5, 0);
-  Serial.print(F(" , "));
+  Serial.print(F(","));
   // Debth:
-  sPrintData(message, 3, 8, 2));
-  Serial.print(F(" , "));
+  sPrintData(message, 3, 8, 0);
+  Serial.print(F(","));
   // Time: 
   sPrintData(message, 4, 11, 0);
-  */
+  Serial.println();
 }
 
 // This function aims to save SRAM by not using Serial.print(float)
@@ -149,73 +175,16 @@ void sPrintData(uint8_t* input, int usedSize, int startPos, int decimals){
     Serial.print(_temp);
   }
   else{
-    tenPower = toPowerOf(10,decimals);
+    long int tenPower = toPowerOf(10,decimals);
     Serial.print(_temp/tenPower); // Integer value
     Serial.print(F("."));
     Serial.print(_temp - tenPower*(_temp/tenPower)); // Decimals
   }
 }
 
-
-float uint8PosToFloat(uint8_t* input, int usedSize, int startPos, int decimals){
-  long int _temp = 0;
-  for (int i = startPos; i< startPos + usedSize; i++){
-    _temp += (long int)input[i] * toPowerOf(256, i-startPos); 
-  }
-  return (float)_temp/toPowerOf(10, decimals);  
-}
-
-void loop() {
-  if (manager.available()){
-    // Serial.println();
-    uint8_t bufLen = sizeof(buf); // Needs to be here to convert to uint8_t
-    uint8_t from;
-    bool duplicate;
-    
-    // We receive, and wait forever to receive it
-    bool receiveSuccess = receive(&duplicate, buf, &bufLen, &from, -1);
-    WriteDataToSerial(buf);
-    // After receiving one message, there may be more incoming because of repeaters and buffers
-    // We wait for 1 sec, between each receive before we give up 
-    bool receiving = true;
-    int timeout = 1000;
-    while (receiving){
-      receiving = receive(&duplicate, buf, &bufLen, &from, timeout);
-      if receiving{
-        WriteDataToSerial(buf);
-      }
-    }
-    
-      
-    // After successful receive(s), send a message: 
-    if (receiveSuccess){
-      uint8_t data[] = F("And hello back to you");
-      uint8_t numberedResponse[sizeof(packageNum) + sizeof(data)];
-      addPackageNum(&numberedResponse[0], &data[0], sizeof(data));
-      
-      if (!manager.sendtoWait(numberedResponse, sizeof(numberedResponse), from)){
-        // Serial.println("Sending failed");
-      }
-      else {
-        // Serial.print(F("Sending successful: "));
-        // Serial.print((int)numberedResponse[0]);
-        // Serial.println((char*)&numberedResponse[1]);
-        updatePackageNum();
-      }
-    }
-  }
-}
 void updatePackageNum(){
   if (packageNum >= 7){ packageNum = 0;} 
   else packageNum ++;
-}
-
-float uint8PosToFloat(uint8_t* input, int usedSize, int startPos, int decimals){
-  long int _temp = 0;
-  for (int i = startPos; i< startPos + usedSize; i++){
-    _temp += (long int)input[i] * toPowerOf(256, i-startPos); 
-  }
-  return (float)_temp/toPowerOf(10, decimals);  
 }
 
 long int toPowerOf(int input, int power){
@@ -229,14 +198,6 @@ long int toPowerOf(int input, int power){
     }
     return temp;
 //  }  
-}
-
-long int uint8PosToLongInt(uint8_t* input, int usedSize, int startPos){
-  long int _temp = 0;
-  for (int i = startPos; i< startPos + usedSize; i++){
-    _temp += (long int)input[i] * toPowerOf(256, i-startPos); 
-  }
-  return _temp;  
 }
 
 void addPackageNum(uint8_t* result, uint8_t* input, int sizeOfInput){
@@ -263,7 +224,7 @@ int packageInMemory(int package){
   }
   return 0;
 }
-
+/*
 void printReceived(uint8_t* message, uint8_t from){
   Serial.print(F("Received message from: "));
   Serial.print(from, HEX);
@@ -271,3 +232,5 @@ void printReceived(uint8_t* message, uint8_t from){
   Serial.print((int)message[0]);
   Serial.println((char*)&message[1]);  
 }
+*/
+

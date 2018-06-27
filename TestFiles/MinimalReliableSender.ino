@@ -57,7 +57,7 @@ RTC_DS3231 rtc;
 #define RECEIVER_ADDRESS 2
 
 // Set frequency [MHz]. The LoRa chip used here can operate at 868 MHz.
-#define LoRa_FREQ 871.0
+#define LoRa_FREQ 870.1
 
 // Singleton instance of the radio driver.
 RH_RF95 lora(LoRa_CS, LoRa_INT);
@@ -70,6 +70,7 @@ uint8_t packageNum;
 // Don't put this on the stack:
 uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
 uint8_t memory[4][15]; // Memory that can store 4 packages of size 14
+uint8_t memoryPointer;
 uint8_t packageMemory[4]; 
 uint8_t packageMemoryPointer;
 
@@ -123,6 +124,7 @@ Adafruit_AM2320 am2320 = Adafruit_AM2320();
 
 
 void setup() {
+  pinMode(4,OUTPUT);
   pinMode(RFM95_RST, OUTPUT);
   digitalWrite(RFM95_RST, HIGH);
   
@@ -138,14 +140,9 @@ void setup() {
   initializeHumidity();
   initializeTimer();
   
-//  if (!rf95.setFrequency(RF95_FREQ)) {
-//    Serial.println("setFrequency failed");
-//    while (1);
-//  }
-  // rf95.setTxPower(13);
-  
   packageNum = 0;
   packageMemoryPointer = 0;
+  memoryPointer = 0;
   for (int i = 0; i< 4; i++){
     packageMemory[i] = -1;
     memory[i][1] = (char)0; // Because first bit is packageNum
@@ -188,24 +185,20 @@ void loop() {
   
   // Adding packet number
   fillLongIntToPos((long int) packageNum, 1, 0, data);
-
-  
-
-  
-//  uint8_t data[] = "Hello from the sender!"; 
-//  uint8_t numberedData[sizeof(packageNum) + sizeof(data)];
-//  addPackageNum(&numberedData[0], &data[0], sizeof(data));
   
   Serial.println(F("\nMessage generated: "));
   Serial.print((int)data[0]); // Printing the first part of the message
   
+  sendFromMemory();
+
+  // Send newly generated data
   if (!manager.sendtoWait(data, sizeof(data), RECEIVER_ADDRESS)){     
     // Send unsuccessful       
-    writeToMemory(data, sizeof(data));   
+    writeToMemory(data, sizeof(data));       
     printFullDataMessage();   
   }
-  sendFromMemory(); 
-
+  Serial.println((int)lora.lastRssi());
+   
   uint8_t bufLen = sizeof(buf);
   uint8_t from;
   
@@ -219,14 +212,14 @@ void loop() {
       if (!packageInMemory((int)buf[0])){
         // This is a new message, we are interested
         updatePackageMemory((int)buf[0]);
-        printReceived(&buf[0], from);
       }
       else{Serial.println(F("Received duplicate"));};      
     }
     else receiving = false;
   }
+  
   updatePackageNum();  
-  delay(6000);
+  delay(600);
 }
 
 //////////////// Initializing functions ////////////////
@@ -252,7 +245,7 @@ void initializeTimer(){
   }
   rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   if (rtc.lostPower()) {
-    Serial.println("RTC lost power, lets set the time!");
+    Serial.println(F("RTC lost power, lets set the time!"));
     // following line sets the RTC to the date & time this sketch was compiled
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
     // This line sets the RTC with an explicit date & time, for example to set
@@ -281,14 +274,14 @@ void initializeLoRa()
   delay(1000);
 
   // Initialize LoRa.
-//  lora.init();
+  //  lora.init();
 
   // Set frequency.
   lora.setFrequency(LoRa_FREQ);
   
   // Set transmitter power, value from 7-23 (23 = 20 dBm). 13 dBm is default. 
   // Can go above this using PA_BOOST, which RFM9x has.
-  lora.setTxPower(13);
+  lora.setTxPower(23);
 
   // Set spreding factor, bandwidth and coding rate. 
   // See LoRa #define in top of code for description and usage.
@@ -305,7 +298,7 @@ void initializeLoRa()
 long int getHumidity()
 {
 
-  return (long int) (am2320.readHumidity() * 100 ) ;
+  return (long int) (am2320.readHumidity() * 10 ) ;
 }
 
 // Returns the time in MonthMonthDateDateYearYearHourHourMinuteMinute format, 10 digits
@@ -313,16 +306,11 @@ long int getHumidity()
 // Long can hold: 2'147'483'647
 // Not tested
 long int getTime(){
-  DateTime now = rtc.now();
-  
+  DateTime now = rtc.now();  
 
   // year = 2018, year%100 = 18
   long int timeInt = (long)now.month() * 100000000 + (long)now.day()*1000000 +((long)now.year()%100)*10000;
   timeInt += (long)now.hour()*100 + (long) now.minute();
-//  uint8_t timeValue[3];  
-//  return fillLongIntToPos(timeInt, 3, 0, timeValue);
-  Serial.print(F("Time: "));
-  Serial.println(timeInt);
   return timeInt; 
 }
 
@@ -331,7 +319,10 @@ long int getTime(){
 // 2 decimal presicion.
 long int getDepth()
 {
-  return (long int) (floatMap(analogRead(A0), 411,647, 0,213) * 100);
+  long int _depthVal = (long int) floatMap(analogRead(A0), 195, 305, 0,213);
+  Serial.println("Depth: ");
+  Serial.println(_depthVal);
+  return _depthVal;
 }
 
 // Returns temperature [*C] with two decimals precision.
@@ -356,13 +347,6 @@ float floatMap(float x, float in_min, float in_max, float out_min, float out_max
 return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
-//void addPackageNum(uint8_t* result, uint8_t* input, int sizeOfInput){
-//  result[0] = packageNum;
-//  for (int i=0; i< sizeOfInput; i++){
-//    result[i+1] = input[i];
-//  }
-//}
-
 // counting package numbers 0-7 to try to use 3 bit at some time.
 void updatePackageNum(){
   if (packageNum >= 7){ packageNum = 0;} 
@@ -376,7 +360,8 @@ void clearReceivedData(uint8_t* buf,uint8_t* bufLen, uint8_t* from){
   from = (char)0;
 }
 
-void sendFromMemory(){ // trying to send all elements of memory
+// Iterating over memory, trying to send all of them
+void sendFromMemory(){ 
   for (int i = 0; i <4; i++){ 
     // Iterating over the 4 memory positions    
     if (memory[i][1] != (char)0){   
@@ -399,15 +384,24 @@ void deleteFromMemory(int deletePosition){
 }
 
 // Returning position of unused memory
-// Returning 0 if memory is full
+// Returning values from 0-3 if memory is full, incrementing starting at last filled position
 int findEmptyMemory(){    
+  // The for-loop looks for empty memory
   for (int i = 0; i < 4; i++){ // Assuming memory has size of 4
     if (memory[i][1] == 0){
       Serial.print(F("Found empty memory at position: "));
-      Serial.println(i);      
+      Serial.println(i); 
+      memoryPointer = i;     
       return i;
     }
   }
+  // Memory is full
+  if (memoryPointer < 3){ 
+    // We can increment legally
+    memoryPointer ++;
+    return memoryPointer;
+  }
+  memoryPointer = 0;
   return 0; // No memory is empty, overwriting should start at pos 0
 }
 
@@ -439,8 +433,6 @@ int packageInMemory(int package){
   return 0;
 }
 
-
-//////////////////// Print functions ////////////////////
 void printFullDataMessage(){
   for (int i = 0; i < 4 ; i++){
     if (memory[i][1] != (char)0){
@@ -462,4 +454,4 @@ void printReceived(uint8_t* message, uint8_t from){
   Serial.println(from, HEX);
 }
 
-//////////// These functions take ~ 80 bytes /////////////
+
