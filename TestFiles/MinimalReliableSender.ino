@@ -12,7 +12,7 @@
  * D6   -> Temp&Press SDO (aka. MISO)
  * D7   -> Temp&Press SCK
  * D8   -> Temp&Press CS
- * 
+ * D9   -> MOSFET Gate
  * D10  -> LoRa CS
   * D11  -> LoRa MOSI
  * D12  -> LoRa MISO
@@ -124,7 +124,8 @@ Adafruit_AM2320 am2320 = Adafruit_AM2320();
 
 
 void setup() {
-  pinMode(4,OUTPUT);
+  pinMode(9,OUTPUT);
+  digitalWrite(9,LOW);
   pinMode(RFM95_RST, OUTPUT);
   digitalWrite(RFM95_RST, HIGH);
   
@@ -186,8 +187,8 @@ void loop() {
   // Adding packet number
   fillLongIntToPos((long int) packageNum, 1, 0, data);
   
-  Serial.println(F("\nMessage generated: "));
-  Serial.print((int)data[0]); // Printing the first part of the message
+  Serial.print(F("\nMessage generated, with number: "));
+  Serial.println((int)data[0]); // Printing the first part of the message
   
   sendFromMemory();
 
@@ -197,6 +198,7 @@ void loop() {
     writeToMemory(data, sizeof(data));       
     printFullDataMessage();   
   }
+  Serial.print("RSSI [dBm] of last sent message  : ");
   Serial.println((int)lora.lastRssi());
    
   uint8_t bufLen = sizeof(buf);
@@ -319,9 +321,15 @@ long int getTime(){
 // 2 decimal presicion.
 long int getDepth()
 {
+  digitalWrite(9,HIGH);
+  delay(100);
+  // floatmap(analog value, lowest pressure, high pressure, depth for low pressure, depth for high pressure);
   long int _depthVal = (long int) floatMap(analogRead(A0), 195, 305, 0,213);
+  
   Serial.println("Depth: ");
   Serial.println(_depthVal);
+  digitalWrite(9,LOW);
+  // Need to add value equal to the difference from referance point.
   return _depthVal;
 }
 
@@ -439,8 +447,7 @@ void printFullDataMessage(){
       Serial.print(F("Memory: "));
       Serial.print(i);
       Serial.print(" : ");
-      Serial.print((int)memory[i][0]); 
-      Serial.println((char*)&memory[i][1]); 
+      Serial.println((int)memory[i][0]); 
     }    
   }
   Serial.println("");
