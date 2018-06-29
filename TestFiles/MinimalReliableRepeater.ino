@@ -33,7 +33,7 @@ void setup() {
   Serial.begin(9600);
   while (!Serial) ; // Wait for serial port to be available
   if (!manager.init())
-  Serial.println("init failed");
+  Serial.println(F("init failed"));
   delay(1000);
   packageNum = 0;
   packageMemoryFromReceiverPointer = 0;
@@ -44,31 +44,32 @@ void setup() {
     packageMemoryFromReceiver[i] = -1;
     memorySender[i][1] = (char)0;
   }
-  Serial.println("Setup repeater completed");
+  Serial.println(F("Setup repeater completed"));
 }
 
 void loop() {
   if (manager.available()){
     uint8_t bufLen = sizeof(buf); // Needs to be here to convert to uint8_t
-    uint8_t from;  // From becomes author of the message
+    uint8_t from;  // from becomes author of the message
+    uint8_t to; // to becomes the intended receiver of the message
     
-    if (manager.recvfromAck(buf, &bufLen, &from)){ //Function changes value of buf, bufLen and from
+    if (manager.recvfromAck(buf, &bufLen, &from &to)){ //Function changes value of buf, bufLen and from
       // Receive success
       if (!packageInMemory((int)buf[0], from)){
         // New message, this is interesting
         updatePackageMemory((int)buf[0], from);
         printReceived(&buf[0], from);
           
-        if (!forwardMessage(buf, bufLen, from)){ // Pretends to be original sender when forwardning
+        if (!forwardMessage(buf, bufLen, from, to)){ // Pretends to be original sender when forwardning
           // The forwarding was not successful, need to write to memory
           if (from == SENDER_ADDRESS){
             // We only store messages from the sender             
             writeToMemory(buf, bufLen); //, from); 
             printMemory();
           }  
-          else Serial.println("Forward to sender not successful");        
+          else Serial.println(F("Forward to sender not successful"));        
         }
-        else Serial.println("Success");
+        else Serial.println(F("Success"));
         // else, forward success
       }
       // else, we received a duplicate              
@@ -118,7 +119,11 @@ int packageInMemory(int* packageMemory, int package){
 }
 
 // Pretends to be the original sender, and sends to the original destination
-bool forwardMessage(uint8_t* buf, int bufLen, uint8_t from){
+bool forwardMessage(uint8_t* buf, int bufLen, uint8_t from, uint8_t to){
+  // The following is supposed to replace the rest. 
+  /*
+  return manager.sendtoWaitRepeater(buf, bufLen, to, from);
+   */
   if(from == SENDER_ADDRESS){
     // The originator of the message is the sender
     return manager.sendtoWaitRepeater(buf, bufLen, RECEIVER_ADDRESS, SENDER_ADDRESS);
@@ -153,12 +158,12 @@ int sendFromMemory(uint8_t memory[][24], uint8_t author, uint8_t endDest){
     if (memory[i][1] != (char)0){
       // Don't try to send empty memory      
       if (manager.sendtoWaitRepeater(&memory[i][0], sizeof(memory[i]), endDest, author)){ // Trying to send from memory
-        Serial.println("Send from memory success");
+        Serial.println(F("Send from memory success"));
         deleteFromMemory(i, author);          
       }
       else{
         // Not success  
-        Serial.println("Send from memory not a success");  
+        Serial.println(F("Send from memory not a success"));  
       }       
     }        
   }
@@ -187,24 +192,24 @@ void deleteFromMemory(int deletePosition, uint8_t author){
 //}
 
 void printReceived(uint8_t* message, uint8_t from){
-  Serial.print("Received message from: ");
+  Serial.print(F("Received message from: "));
   Serial.print(from, HEX);
-  Serial.print(" : ");
+  Serial.print(F(" : "));
   Serial.print((int)message[0]);
   Serial.print((char*)&message[1]);
-  Serial.print(" : ");  
+  Serial.print(F(" : "));  
 }
 void printMemory(){
-  Serial.println("Memory:");
+  Serial.println(F("Memory:"));
   for (int i = 0; i < 4 ; i++){
     if (memorySender[i][1] != (char)0){
-      Serial.print("For iterator value: ");
+      Serial.print(F("For iterator value: "));
       Serial.print(i);
-      Serial.print(" : ");
+      Serial.print(F(" : "));
       Serial.print((int)memorySender[i][0]); // The number that is in front of the message
-      Serial.println((char*)&memorySender[i][1]); // The text in the message
+      // Serial.println((char*)&memorySender[i][1]); // The text in the message
     }    
   }
-  Serial.println("");
+  Serial.println();
 }
 
