@@ -4,6 +4,8 @@
 
 
 #define SENDER_ADDRESS 1
+#define SENDER2_ADDRESS 4
+#define SENDER3_ADDRESS 5
 #define RECEIVER_ADDRESS 2
 #define REPEATER_ADDRESS 3
 #define RF95_FREQ 868.0
@@ -23,11 +25,26 @@ int packageMemoryFromReceiver[4]; // Storing the package number of messages from
 uint8_t packageMemoryFromReceiverPointer; // Points at next place to write memory
 
 
-uint8_t memorySender[4][24];
+// For sender number 1
+uint8_t memorySender[4][15];
 int packageMemoryFromSender[4]; // Storing the package number of messages from the sender 
 uint8_t packageMemoryFromSenderPointer;
 
 
+// For sender number 2
+uint8_t memorySender2[4][15];
+int packageMemoryFromSender2[4]; // Storing the package number of messages from the sender 
+uint8_t packageMemoryFromSender2Pointer;
+
+// For sender number 3
+uint8_t memorySender3[4][15];
+int packageMemoryFromSender3[4]; // Storing the package number of messages from the sender 
+uint8_t packageMemoryFromSender3Pointer;
+
+// For sender number 4
+uint8_t memorySender4[4][15];
+int packageMemoryFromSender4[4]; // Storing the package number of messages from the sender 
+uint8_t packageMemoryFromSender4Pointer;
 
 void setup() {
   Serial.begin(9600);
@@ -47,32 +64,50 @@ void setup() {
   Serial.println(F("Setup repeater completed"));
 }
 
+// Receives message and detects duplicates
+bool receive(bool* duplicate, uint8_t* message, uint8_t* bufLen, uint8_t* from, uint8_t* to, int timeout){
+  bool success;
+  if (manager.recvfromAckTimeout(buf, bufLen, timeout, from, to)){
+    // Receive successful
+    success = true;
+    if (!packageInMemory((int)buf[0], from)){
+      // New message, we are interested
+      *duplicate = false;
+      updatePackageMemory((int)buf[0], from);
+      printReceived(&buf[0], from[0]);
+    }
+    else {
+      Serial.println(F("Received duplicate"));
+      *duplicate = true;
+    }
+  }
+  else{
+    *duplicate = false;
+    success = false;
+  }
+  return success;
+}
+
 void loop() {
   if (manager.available()){
+    
     uint8_t bufLen = sizeof(buf); // Needs to be here to convert to uint8_t
     uint8_t from;  // from becomes author of the message
     uint8_t to; // to becomes the intended receiver of the message
-    
-    if (manager.recvfromAck(buf, &bufLen, &from &to)){ //Function changes value of buf, bufLen and from
-      // Receive success
-      if (!packageInMemory((int)buf[0], from)){
-        // New message, this is interesting
-        updatePackageMemory((int)buf[0], from);
-        printReceived(&buf[0], from);
-          
-        if (!forwardMessage(buf, bufLen, from, to)){ // Pretends to be original sender when forwardning
-          // The forwarding was not successful, need to write to memory
-          if (from == SENDER_ADDRESS){
-            // We only store messages from the sender             
-            writeToMemory(buf, bufLen); //, from); 
-            printMemory();
-          }  
-          else Serial.println(F("Forward to sender not successful"));        
-        }
-        else Serial.println(F("Success"));
-        // else, forward success
+    bool duplicate;
+
+    // receive(bool, message, bufLen, from, timeout);
+    bool receiveSuccess = receive(&duplicate, buf, &bufLen, &from, &to, 60000);
+    if (receiveSuccess && !duplicate){
+      if (!forwardMessage(buf, bufLen, from, to)){ 
+        // The forwarding was not successful, need to write to memory
+        if (from == SENDER_ADDRESS){
+          // We only store messages from the sender             
+          writeToMemory(buf, bufLen); //, from); 
+          printMemory();
+        }         
       }
-      // else, we received a duplicate              
+      else Serial.println(F("Forward success"));
     }
     sendFromMemory(memorySender, SENDER_ADDRESS, RECEIVER_ADDRESS);
   }
@@ -121,16 +156,7 @@ int packageInMemory(int* packageMemory, int package){
 // Pretends to be the original sender, and sends to the original destination
 bool forwardMessage(uint8_t* buf, int bufLen, uint8_t from, uint8_t to){
   // The following is supposed to replace the rest. 
-  /*
   return manager.sendtoWaitRepeater(buf, bufLen, to, from);
-   */
-  if(from == SENDER_ADDRESS){
-    // The originator of the message is the sender
-    return manager.sendtoWaitRepeater(buf, bufLen, RECEIVER_ADDRESS, SENDER_ADDRESS);
-  }
-  else if (from == RECEIVER_ADDRESS){
-    return manager.sendtoWaitRepeater(buf, bufLen, SENDER_ADDRESS, RECEIVER_ADDRESS);
-  }
 }
 
 // Returning smalles position of unused memory
@@ -153,7 +179,7 @@ void writeToMemory(uint8_t* message, int messageLength){
 
 
 // sending all elements of memory, returns 1 for success
-int sendFromMemory(uint8_t memory[][24], uint8_t author, uint8_t endDest){ 
+int sendFromMemory(uint8_t memory[][15], uint8_t author, uint8_t endDest){ 
   for (int i = 0; i <4; i++){ // Iterating over the 4 memory positions
     if (memory[i][1] != (char)0){
       // Don't try to send empty memory      
