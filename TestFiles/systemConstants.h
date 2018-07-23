@@ -8,8 +8,8 @@
  *                                                                                                       *
  * A0   -> UNIK 500 (see sketch on github for connection)                                                *
  *                                                                                                       *
- * D2   -> LoRa G0                                                                                       *
- * D3   -> LoRa RST                                                                                      *
+ * D3   -> LoRa G0                                                                                       *
+ * D4   -> LoRa RST                                                                                      *
  *                                                                                                       *
  * D5   -> Rwmp&Press SDI (aka. MOSI)                                                                    *
  * D6   -> Temp&Press SDO (aka. MISO)                                                                    *
@@ -19,12 +19,17 @@
  * D10  -> LoRa CS                                                                                       *
  * D11  -> LoRa MOSI                                                                                     *
  * D12  -> LoRa MISO                                                                                     *
- * D13  -> LoRa SCK                                                                                      *
+ * D13  -> LoRa SCK        
+ * 
+ * A0   -> gpsEnable                                                                              *
  *                                                                                                       *
  *                                                                                                       *
  * SDA  -> Humidity sensor pin 2 (from left, seen from side with holes)                                  *
  * SCL  -> Humidity sensor pin 4 (from left, seen from side with holes)                                  *
  *-------------------------------------------------------------------------------------------------------*/
+
+
+#define RECEIVER_ADDRESS 7
 
 
 /*---------------------------------------------------*
@@ -41,6 +46,13 @@
 #define BMP_MISO 6
 #define BMP_SCK 7
 #define TempAndPressure_CS 8
+
+/*---------------------------*
+ * Set gpsEnable pin to A0   *
+ *---------------------------*/
+#define gpsEnable 14 
+
+
 
 
 #define RF95_FREQ 868.0
