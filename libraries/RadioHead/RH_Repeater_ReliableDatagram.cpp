@@ -124,29 +124,29 @@ bool RH_Repeater_ReliableDatagram::recvfromAck(uint8_t* buf, uint8_t* len, uint8
     // Get the message before its clobbered by the ACK (shared rx and tx buffer in some drivers
     if (available() && recvfrom(buf, len, &_from, &_to, &_id, &_flags))
     {
-	// Never ACK an ACK
-//	if (!(_flags & RH_FLAGS_ACK))
-//	{
-	    // Its a normal message not an ACK
-	    //if (_to ==_thisAddress) 
-        if(_to != RH_BROADCAST_ADDRESS)
-	    {
-		// Its not a broadcast, so ACK it
-		// Acknowledge message with ACK set in flags and ID set to received ID
-		acknowledge(_id, _from, _to); // Was from
-	    }
-	    // If we have not seen this message before, then we are interested in it
-	    if (_id != _seenIds[_from])
-	    {
-		if (from)  *from =  _from;
-		if (to)    *to =    _to; // We don't care who the message is for
-		if (id)    *id =    _id;
-		if (flags) *flags = _flags;
-		_seenIds[_from] = _id;
-		return true;
-	    }
-	    // Else just re-ack it and wait for a new one
-//	}
+		// Never ACK an ACK
+		if (!(_flags & RH_FLAGS_ACK))
+		{
+			// Its a normal message not an ACK
+			//if (_to ==_thisAddress) 
+			if(_to != RH_BROADCAST_ADDRESS)
+			{
+			// Its not a broadcast, so ACK it
+			// Acknowledge message with ACK set in flags and ID set to received ID
+			acknowledge(_id, _from, _to); // Was from
+			}
+			// If we have not seen this message before, then we are interested in it
+			if (_id != _seenIds[_from])
+			{
+			if (from)  *from =  _from;
+			if (to)    *to =    _to; // We don't care who the message is for
+			if (id)    *id =    _id;
+			if (flags) *flags = _flags;
+			_seenIds[_from] = _id;
+			return true;
+			}
+			// Else just re-ack it and wait for a new one
+		}
     }
     // No message for us available
     return false;
