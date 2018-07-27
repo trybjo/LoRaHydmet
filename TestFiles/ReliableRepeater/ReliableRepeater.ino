@@ -1,104 +1,134 @@
-// rf95_reliable_datagram_server.pde
-// -*- mode: C++ -*-
-// Example sketch showing how to create a simple addressed, reliable messaging server
-// with the RHReliableDatagram class, using the RH_RF95 driver to control a RF95 radio.
-// It is designed to work with the other example rf95_reliable_datagram_client
-// Tested with Anarduino MiniWirelessLoRa, Rocket Scream Mini Ultra Pro with the RFM95W 
+#include <timeAndAlarm.h>
+#include <memoryRepeater.h>
+#include "systemConstants.h"
 
-#include <RHReliableDatagram.h>
+#include <RH_Repeater_ReliableDatagram.h>
+#include <LoRa.h>
 #include <RH_RF95.h>
 #include <SPI.h>
+#include <EEPROM.h>
+#include "TinyGPS++.h"
+#include "RTClibExtended.h"
+#include <Adafruit_Sensor.h>
+#include <Wire.h>
+
+#define REPEATER_ADDRESS 6
 
 
-#define RFM95_CS 4
-#define RFM95_RST 2
-#define RFM95_INT 3
+RTC_DS3231 RTC;                                               // Instanciate the external clock
+TinyGPSPlus gps;                                              // Instanciate the GPS
+timeAndAlarm TimeAlarm(RTC);                                  // Instanciate the time and alarm handler
 
-#define SENDER_ADDRESS 1
-#define REPEATER_1_ADDRESS 2
-#define RECEIVER_ADDRESS 3
-#define RF95_FREQ 868.0
-
-// Singleton instance of the radio driver
-RH_RF95 driver;
-//RH_RF95 driver(5, 2); // Rocket Scream Mini Ultra Pro with the RFM95W
-
-// Class to manage message delivery and receipt, using the driver declared above
-RHReliableDatagram manager(driver, REPEATER_1_ADDRESS);
+RH_RF95 lora(LoRa_CS, LoRa_INT);                              // Instanciate the LoRA driver
+RH_Repeater_ReliableDatagram manager(lora, REPEATER_ADDRESS); // Instanciate the reliable sender
 
 
-void setup() 
-{
-  Serial.begin(9600);
-  while (!Serial) ; // Wait for serial port to be available
-  if (!manager.init())
-    Serial.println("init failed");
-  // Defaults after init are 434.0MHz, 13dBm, Bw = 125 kHz, Cr = 4/5, Sf = 128chips/symbol, CRC on
-
-  // The default transmitter power is 13dBm, using PA_BOOST.
-  // If you are using RFM95/96/97/98 modules which uses the PA_BOOST transmitter pin, then 
-  // you can set transmitter powers from 5 to 23 dBm:
-//  driver.setTxPower(23, false);
-  // You can optionally require this module to wait until Channel Activity
-  // Detection shows no activity on the channel before transmitting by setting
-  // the CAD timeout to non-zero:
-//  driver.setCADTimeout(10000);
-}
-
-uint8_t data[] = "Ack";
-// Dont put this on the stack:
+// Dynamic memory for receiving messages:
 uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
 
-void loop()
-{
-  if (manager.available())
-  {
-    // Wait for a message addressed to us from someone
-    uint8_t len = sizeof(buf);
-    uint8_t from;
-    if (manager.recvfromAck(buf, &len, &from))
-    {
-      Serial.print("got request from : 0x");
-      Serial.print(from, HEX);
-      Serial.print(": ");
-      Serial.println((char*)buf);
-      Serial.println(from);
-
-      // Send a reply back to the originator client
-      if (!manager.sendtoWait(data, sizeof(data), from)){
-        Serial.println("sendtoWait failed");}
-      else if (from == SENDER_ADDRESS){ // The message was from the sender, we forward to receiver
-        Serial.println("Message from sender, trying to send to receiver");
-        if (manager.sendtoWait(data, sizeof(data), RECEIVER_ADDRESS))
-          // Now wait for a reply from the repeater
-          uint8_t len = sizeof(buf);
-          uint8_t from;   
-          if (manager.recvfromAckTimeout(buf, &len, 2000, &from)){
-            Serial.print("got reply from : 0x");
-            Serial.print(from, HEX);
-            Serial.print(": ");
-            Serial.println((char*)buf);
-          }
-          else{
-            Serial.println("No reply, is Receiver running?");
-          }
-        }
-        else if (from == RECEIVER_ADDRESS){ // The message was from the receiver, we forward to sender
-        if (manager.sendtoWait(data, sizeof(data), SENDER_ADDRESS))
-          // Now wait for a reply from the repeater
-          uint8_t len = sizeof(buf);
-          uint8_t from;   
-          if (manager.recvfromAckTimeout(buf, &len, 2000, &from)){
-            Serial.print("got reply from : 0x");
-            Serial.print(from, HEX);
-            Serial.print(": ");
-            Serial.println((char*)buf);
-          }
-          else{
-            Serial.println("No reply, is Server running?");
-          }
-        }
-     }
+void setup() {
+  Serial.begin(9600);
+  while (!Serial); // Wait for serial port to be available
+  if (!manager.init())
+  Serial.println(F("init failed"));
+  delay(1000); 
+  
+  initializeLoRa();
+  if (initializeMemory()){
+    Serial.println(F("First time, initializing values to zero"));
+    delay(50);
   }
+  updateClock(1);
+  Serial.println(TimeAlarm.getTimeStamp());
+  initializeAlarm();
+  // hh, mm, ss
+  
+  TimeAlarm.setWakeUpPeriod(0, 5, 0);
+
+  // Set alarm 30 seconds before the next 10-minute:
+  TimeAlarm.setAlarm1(5, -30);
+  printAlarm();
+  Serial.println(F("Setup repeater completed"));
+  delay(100);
+  goToSleep();
 }
+
+void loop() {
+
+  TimeAlarm.stopAlarm();
+  printAlarm();
+  
+  Serial.print(F("Woke up at time :"));
+  Serial.println(TimeAlarm.getTime());
+  
+  byte firstReceiveFromSender = 0; // Byte is filled with ones for each sender 
+  // that has send messages. Used to time the first message received
+  while(TimeAlarm.timeDifference() > -60){ 
+    // Receiving for one minute
+    // Negative time difference means the alarm has gone off already
+    // As the time since alarm increases, the difference becomes more negative
+    
+    if (manager.available()){
+      uint8_t bufLen = sizeof(buf); // Needs to be here to convert to uint8_t
+      uint8_t from;  // from becomes author of the message
+      uint8_t to; // to becomes the intended receiver of the message
+      bool duplicate;
+      // receive(bool, message, bufLen, from, timeout);
+      bool receiveSuccess = myReceive(duplicate, buf, &bufLen, &from, &to, 2000);
+
+      // This following should make adjusting time possible
+      /*
+      if (receiveSuccess && !((firstReceiveFromSender >> from) & 1)){
+        // If this is the first message we get from the given sender
+        firstReceiveFromSender |= (1<<from) // Indicate that we now have got a message from the sender
+        if (abs(TimeAlarm.timeDifference() + 30+ 2*from) > 15){
+          // The time difference from now and when the sender should send message
+          // Is larger than 15 seconds. 
+          // We should send a message to that sender, and ask to change clock time
+          uint8_t message[1];
+          message[0] = TimeAlarm.timeDifference() + 2*from;  
+          manager.sendtoWaitRepeater(&message[0], sizeof(message), from, REPEATER_ADDRESS);
+        }        
+      }
+      */
+      
+      if (receiveSuccess && !duplicate && from != RECEIVER_ADDRESS){        
+        // We only store messages from the senders             
+        writeMessageToMemory(buf, bufLen, from); 
+        printMemory(from);        
+      }
+      else if (receiveSuccess && !duplicate && from == RECEIVER_ADDRESS){
+        forwardMessage(buf, bufLen, from, to);
+        writeMessageToMemory(buf, bufLen, from);
+      }
+    }
+  }
+  
+  Serial.print(F("Stopped listening at :"));
+  
+  Serial.println(TimeAlarm.getTime());
+  
+  sendFromMemory();
+  
+  DateTime timeNow = RTC.now();
+  if (!(timeNow.day() % 7 ) && EEPROM.read(800) != timeNow.day()){
+    // If the date number is dividable by 7
+    // and if this date is last reboot date
+    // Reboot
+  }
+  if (!(timeNow.month() % 6 ) && EEPROM.read(801) != timeNow.month()){
+    // If the month is dividable by 6
+    // and if this month is not last clock update month
+    updateClock(2);
+  }
+  
+  TimeAlarm.setNextWakeupTime();
+  TimeAlarm.setAlarm1();
+
+  printAlarm();  
+  
+  goToSafeSleep();
+}
+
+
 

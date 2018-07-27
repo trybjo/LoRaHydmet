@@ -1,0 +1,100 @@
+GPS Start
+727180608
+Alarm: 6102
+Sender on
+Alarm: 6102
+Woke up at time :1002
+Depth = 0
+
+Message generated, with number: 7
+Send from memory unsuccessful for packet number: 0
+Send from memory unsuccessful for packet number: 1
+Send from memory unsuccessful for packet number: 2
+Send from memory unsuccessful for packet number: 3
+Send from memory unsuccessful for packet number: 4
+Send from memory unsuccessful for packet number: 5
+Send from memory unsuccessful for packet number: 6
+Send from memory unsuccessful for packet number: 7
+Send unsuccessful
+RSSI [dBm] of last sent message  : 0
+Alarm: 6202
+Alarm: 6202
+Woke up at time :2002
+Depth = 0
+
+Message generated, with number: 0
+Send from memory unsuccessful for packet number: 0
+Send from memory unsuccessful for packet number: 1
+Send from memory unsuccessful for packet number: 2
+Send from memory unsuccessful for packet number: 3
+Send from memory unsuccessful for packet number: 4
+Send from memory unsuccessful for packet number: 5
+Send from memory unsuccessful for packet number: 6
+Send from memory unsuccessful for packet number: 7
+Send unsuccessful
+RSSI [dBm] of last sent message  : 0
+Alarm: 6302
+Alarm: 6302
+Woke up at time :3002
+Depth = 0
+
+Message generated, with number: 1
+Send from memory unsuccessful for packet number: 0
+Send from memory unsuccessful for packet number: 1
+Send from memory unsuccessful for packet number: 2
+Send from memory unsuccessful for packet number: 3
+Send from memory unsuccessful for packet number: 4
+Send from memory unsuccessful for packet number: 5
+Send from memory unsuccessful for packet number: 6
+Send from memory unsuccessful for packet number: 7
+Send unsuccessful
+RSSI [dBm] of last sent message  : 0
+Alarm: 6402
+Alarm: 6402
+Woke up at time :4002
+Depth = 0
+
+Message generated, with number: 2
+Send from memory unsuccessful for packet number: 0
+Send from memory unsuccessful for packet number: 1
+Send from memory unsuccessful for packet number: 2
+Send from memory unsuccessful for packet number: 3
+Send from memory unsuccessful for packet number: 4
+Send from memory unsuccessful for packet number: 5
+Send from memory unsuccessful for packet number: 6
+Send from memory unsuccessful for packet number: 7
+Send unsuccessful
+RSSI [dBm] of last sent message  : 0
+Alarm: 6502
+Alarm: 6502
+Woke up at time :4654
+Depth = 0
+
+Message generated, with number: 3
+Send from memory unsuccessful for packet number: 0
+Send from memory unsuccessful for packet number: 1
+Send from memory unsuccessful for packet number: 2
+Send from memory unsuccessful for packet number: 3
+Send from memory unsuccessful for packet number: 4
+Send from memory unsuccessful for packet number: 5
+Send from memory unsuccessful for packet number: 6
+Send from memory unsuccessful for packet number: 7
+Send unsuccessful
+RSSI [dBm] of last sent message  : -132
+Alarm: 702
+Alarm: 702
+Woke up at time :4814
+Depth = 0
+
+Message generated, with number: 4
+Send from memory unsuccessful for packet number: 0
+Send from memory unsuccessful for packet number: 1
+Send from memory unsuccessful for packet number: 2
+Send from memory unsuccessful for packet number: 3
+Send from memory unsuccessful for packet number: 4
+Send from memory unsuccessful for packet number: 5
+Send from memory unsuccessful for packet number: 6
+Send from memory unsuccessful for packet number: 7
+Send unsuccessful
+RSSI [dBm] of last sent message  : -133
+Alarm: 7102

@@ -1,0 +1,36 @@
+GPS Start
+727181056
+Alarm: 1102
+Sender on
+Alarm: 1102
+Woke up at time :2
+Depth = 0
+
+Message generated, with number: 1
+Send unsuccessful
+RSSI [dBm] of last sent message  : 0
+Alarm: 11102
+Alarm: 11102
+Woke up at time :457
+Depth = 0
+
+Message generated, with number: 2
+Send from memory unsuccessful for packet number: 1
+Send unsuccessful
+RSSI [dBm] of last sent message  : -132
+Alarm: 11202
+Alarm: 11202
+Woke up at time :559
+Depth = 0
+
+Message generated, with number: 3
+Send from memory unsuccessful for packet number: 1
+Send from memory unsuccessful for packet number: 2
+Send unsuccessful
+RSSI [dBm] of last sent message  : -133
+Alarm: 11302
+Alarm: 11302
+Woke up at time :657
+Depth = 0
+
+Message generated, with number: 4
