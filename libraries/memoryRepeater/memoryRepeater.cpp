@@ -6,147 +6,150 @@
 #define SENDER2_ADDRESS 2
 #define SENDER3_ADDRESS 3
 #define SENDER4_ADDRESS 4
-#define SENDER5_ADDRESS 5
-#define SENDER6_ADDRESS 6
 
-#define RECEIVER_ADDRESS 7
-#define REPEATER_ADDRESS 8
+#define RECEIVER_ADDRESS 5
+#define REPEATER_ADDRESS 6
 
-// Dynamic variables:
-uint8_t packageNumberPointer1 = 0;
-uint8_t packageNumberPointer2 = 0;
-uint8_t packageNumberPointer3 = 0;
-uint8_t packageNumberPointer4 = 0;
-uint8_t packageNumberPointer5 = 0;
-uint8_t packageNumberPointer6 = 0;
-uint8_t packageNumberPointerReceiver = 0; // Points at next place to write packet number to memory
 
-void loadDynamicVariables();
-
-void writeMessageToMemory(uint8_t* message, int messageLength, uint8_t from){
+bool writeMessageToMemory(uint8_t* message, int messageLength, uint8_t from){
   int packageNum = message[0];
-  for(int i = 0; i < messageLength; i++){
-    EEPROM.update(100*packageNum + 15*(from-1) + i, message[i]);
+  if (from < RECEIVER_ADDRESS && messageLength < 22){
+    for(int i = 0; i < messageLength; i++){
+      EEPROM.update(100*packageNum + 22*(from-1) + i, message[i]);
+    }
+    EEPROM.update(100*packageNum + 22*(from-1) + 21, 1);
+    return true;
   }
+
+  else if (from == RECEIVER_ADDRESS && messageLength < 10){
+    // We set the indicator for this message, and clear all others
+    EEPROM.update(100*packageNum + 97, 1);
+    for (int i = messageLength + 1; i < 8; i++){
+      EEPROM.update(100*i + 97, 0);
+    }
+    for (int i = 0; i < messageLength; i++){
+      EEPROM.update(100*i + 97, 0);
+    }
+    return true;
+  }
+  return false;
 }
 
-
 bool initializeMemory(){ 
-  EEPROM.update(90,0); // Force memory whipe
-  if(EEPROM.read(90) == 1){
-    // Position 90 is 1 if the processor has been startet before
-    // The processor is waking up from a reboot
-    loadDynamicVariables();
-    return false;
-  }
-  else{    
+  EEPROM.update(98,0); // Force memory whipe
+  if(EEPROM.read(98) != 1){
+    // Position 98 is 1 if the processor has been startet before
+    // The processor is waking up from a reboot  
     // Deleting memory from all senders
     for (int i = 0; i < 8; i++){
       // i representing packet number
-      for (int j = 1; j < 7; j++){
-        // j representing sender address
+      for (int j = 1; j < 6; j++){
+        // j representing sender addresses plus address of receiver
         deleteFromMemory(j, i);
       }
     }
-    // Removing all packet numbers and setting packet pointers 0
-    for (int j = 1; j < 7; j++){
-      // j representing each sender, could be up to six
-      EEPROM.update(100*j+ 94, 0);
-      for (int i = 0; i < 4; i++){
-        // j representing the four packet number positions
-        EEPROM.update(100*j + 90 + i, 8);
-        // 8 is invalid packet number
-      }
-    }
-    EEPROM.update(90,1); 
+    EEPROM.update(98,1); 
     // Indicating that the processor has been initiated
     return true;
   }
+  return false;
 }
 
 void deleteFromMemory(uint8_t author, int packetNum){
-  // Element 11 of each message is 0, indicating empty memory
-  // If not empty, memory position 11 contains month
-  if (0 < author && author < 7 && 0 <= packetNum && packetNum  < 8){
-    EEPROM.update(100*packetNum + 15*(author-1) + 11, 0);
+  // Element 22 of each message is 0, indicating message is not in queue for sending
+  // Because zero index, we add 21 to the first byte position
+  // For the sender, byte 11 of message is what indicates message has been sent
+  if (0 < author && author < 5 && 0 <= packetNum && packetNum  < 8){
+    EEPROM.update(100*packetNum + 22*(author-1) + 21, 0);
+  }
+  else if (author == RECEIVER_ADDRESS && 0 <= packetNum && packetNum  < 8){
+    EEPROM.update(100*packetNum + 22*(author-1) + 9, 0);
   }
 }
 
-void updatePackageNumberPointer(uint8_t &memPointer){
-  if (memPointer < 3){
-    memPointer ++;
+// Calculates input ^ power
+long int toPowerOf(int input, int power){
+    long int temp = 1;
+    for (int i = 0; i < power; i++){
+      temp *= input;
+    }
+    return temp; 
+}
+
+// This function should be checked for bugs
+bool messageIsNew(uint8_t* message, uint8_t from){
+  
+  int packetNum = message[0];
+  
+  if (from == RECEIVER_ADDRESS){
+    // DO SOMETHING
+    return (EEPROM.read(100*packetNum + 22*(from-1) + 9));
   }
-  else memPointer = 0;
-}
 
-void updatePackageNumberMemory(int package, int from, uint8_t &memPointer){
-  EEPROM.update(from*100+90+memPointer, package);
-  updatePackageNumberPointer(memPointer);
-}
+  
 
-
-void updatePackageNumberMemory(int package, uint8_t from){
-  switch(from){
-    case 1:
-      updatePackageNumberMemory(package, from, packageNumberPointer1);
-      break;
-    case 2:
-      updatePackageNumberMemory(package, from, packageNumberPointer2);
-      break;
-    case 3:
-      updatePackageNumberMemory(package, from, packageNumberPointer3);
-      break;
-    case 4:
-      updatePackageNumberMemory(package, from, packageNumberPointer4);
-      break;
-    case 5:
-      updatePackageNumberMemory(package, from, packageNumberPointer5);
-      break;
-    case 6:
-      updatePackageNumberMemory(package, from, packageNumberPointer6);
-      break;
-    case 7:
-      updatePackageNumberMemory(package, from, packageNumberPointerReceiver);
-      break;
+  long int _timeMemory;
+  long int _timeIncoming;
+  for (int i = 11; i < 15; i++){
+    // Iterating over the four bytes containing date and time
+    _timeIncoming += (long int) message[i] * toPowerOf(256, i-11);
+    _timeMemory += (long int) EEPROM.read(100*packetNum + 22*(from-1) + 11 + i) * toPowerOf(256, i-11);
   }
-}
-
-
-
-
-uint8_t valueLimit(uint8_t value){
-  if (value <= 3 && value >=0){
-    return value;
+  // If the times are identical, we can easily tell that the message is not new.
+  if (_timeMemory == _timeIncoming){
+    return false;
   }
-  return 0;
+
+  // _timeMemory and _timeIncoming now both have the format: 
+  // mmddyyhhMM 
+
+  // We can have reached a new month
+  int monthMemory = _timeMemory / 100000000;
+  int monthIncoming = _timeIncoming / 100000000;
+  if (monthMemory < 12 && monthMemory < monthIncoming){
+    // We have just got to a new month
+    return true;
+  }
+  else if (monthMemory == 12 && monthIncoming == 1){
+    // We have just got to a new year
+    return true;
+  }  
+  
+  // We have not reached a new month
+  // We can have reached a new day
+  int dayMemory = (int)(_timeMemory / 1000000) % 100;
+  int dayIncoming = (int)(_timeIncoming / 1000000) % 100;
+  if (dayMemory < dayIncoming) return true;
+
+  // We have not reached a new day
+  // We can have reached a new hour
+  int hourMemory = (_timeMemory % 1000) /100;
+  int hourIncoming = (_timeMemory % 1000) /100;
+  if (hourMemory < hourIncoming) return true;
+
+  // We have not reached a new hour
+  // We can have reached a new minute
+  if (_timeMemory % 100 < _timeIncoming % 100) return true;
+  
+  // We don't have a new year, not a new month.
+  // Not a new day, or a new hour.
+  // Not a new minute.
+  // The message is not new
+  return false;
 }
 
-void loadDynamicVariables(){
-  // Pointers for the package number memory
-  packageNumberPointer1 = valueLimit(EEPROM.read(100*SENDER1_ADDRESS + 94));
-  packageNumberPointer2 = valueLimit(EEPROM.read(100*SENDER2_ADDRESS + 94));
-  packageNumberPointer3 = valueLimit(EEPROM.read(100*SENDER3_ADDRESS + 94));
-  packageNumberPointer4 = valueLimit(EEPROM.read(100*SENDER4_ADDRESS + 94));
-  packageNumberPointer5 = valueLimit(EEPROM.read(100*SENDER5_ADDRESS + 94));
-  packageNumberPointer6 = valueLimit(EEPROM.read(100*SENDER6_ADDRESS + 94));
-  packageNumberPointerReceiver = valueLimit(EEPROM.read(100*RECEIVER_ADDRESS + 94));
+bool queuedForSending(int packetNum, uint8_t from){
+  return EEPROM.read(100*packetNum + 22*(from-1) + 21);
 }
-
-void writeDynamicVariablesToMemory(){
-  // Pointers for the package number memory 
-  EEPROM.update(100*SENDER1_ADDRESS + 94, packageNumberPointer1);
-  EEPROM.update(100*SENDER2_ADDRESS + 94, packageNumberPointer2);
-  EEPROM.update(100*SENDER3_ADDRESS + 94, packageNumberPointer3);
-  EEPROM.update(100*SENDER4_ADDRESS + 94, packageNumberPointer4);
-  EEPROM.update(100*SENDER5_ADDRESS + 94, packageNumberPointer5);
-  EEPROM.update(100*SENDER6_ADDRESS + 94, packageNumberPointer6);
-  EEPROM.update(100*RECEIVER_ADDRESS + 94, packageNumberPointerReceiver);
-}
-
 
 bool packageInMemory(int packageNum, uint8_t from){
-  for (int i = 0; i<4; i++){
-    if (EEPROM.read(from*100+90+i) == packageNum){
+  if (from != RECEIVER_ADDRESS){
+    if (EEPROM.read(100*packageNum + 22*(from-1) + 21)){
+      return true;
+    }
+  }
+  else if (from == RECEIVER_ADDRESS){
+    if (EEPROM.read(100*packageNum + 22*(from-1) + 9)){
       return true;
     }
   }
