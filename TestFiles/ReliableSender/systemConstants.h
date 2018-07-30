@@ -27,9 +27,14 @@
 
 
 
-/*---------------------------------------------------*
- * Sender and receiver address for the LoRa module   *
- * --------------------------------------------------*/
+/*-----------------------------------------------------*
+ * Sender and receiver address for the LoRa module     *
+ * Also defines maximum packet size, 22 byte for data, *
+ * 1 byte for message length, 4 bytes header and 2 FCS *
+ * Definition of RH_RF95_MAX_MESSAGE_LEN: RH_RF95.h    *
+ * ----------------------------------------------------*/
+ 
+#define RH_RF95_MAX_MESSAGE_LEN 29
 #define SENDER_ADDRESS 1 // Range 1 to 4
 #define RECEIVER_ADDRESS 5
 #define REPEATER_ADDRESS 6

@@ -28,9 +28,10 @@ uint8_t packageNum;
 // Don't put this on the stack:
 uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
 
+/*
 uint8_t packageMemory[4]; 
 uint8_t packageMemoryPointer;
-
+*/
 bool buttonPress = false;
 
 //------------------------------------------------------------------------------------------------------------------------
@@ -124,9 +125,6 @@ void loop()
   uint8_t from;  // from becomes author of the message
   
   if (manager.recvfromAckTimeout(buf, &bufLen, 1000, &from)){
-    Serial.println(F("Got reply:"));
-    Serial.println(bufLen);
-    Serial.println(buf[0]);
     if (from == REPEATER_ADDRESS && bufLen == 2){
       Serial.print(F("We got time request: "));
       int seconds = buf[1];
