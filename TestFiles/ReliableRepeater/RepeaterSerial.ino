@@ -31,11 +31,11 @@ void printMemory(int from){
   
   for (int i = 0; i < 8 ; i++){
     // i representing packet number
-    if (EEPROM.read(100*i + 15*(from-1) + 11) != 0){
+    if (EEPROM.read(100*i + 22*(from-1) + 21) != 0){
       Serial.print(F("For iterator value: "));
       Serial.print(i);
       Serial.print(F(" : "));
-      Serial.println(EEPROM.read(100*i + 15*(from-1))); // The number that is in front of the message
+      Serial.println(EEPROM.read(100*i + 22*(from-1))); // The number that is in front of the message
     }    
   }
   Serial.println();

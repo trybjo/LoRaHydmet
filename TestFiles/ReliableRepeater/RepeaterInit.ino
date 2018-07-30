@@ -22,6 +22,7 @@ void initializeLoRa()
   
   // Initialize both LoRa and Reliable Datagram
   if (!manager.init())
+  Serial.println(F("init failed"));
   // Init failed
   delay(1000);
 
@@ -29,7 +30,7 @@ void initializeLoRa()
   //  lora.init();
 
   // Set frequency.
-  lora.setFrequency(RF95_FREQ);
+  lora.setFrequency(LoRa_FREQ);
   
   // Set transmitter power, value from 7-23 (23 = 20 dBm). 13 dBm is default. 
   // Can go above this using PA_BOOST, which RFM9x has.

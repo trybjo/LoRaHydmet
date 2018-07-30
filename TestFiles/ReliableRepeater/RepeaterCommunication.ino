@@ -5,9 +5,8 @@ bool myReceive(bool &duplicate, uint8_t* message, uint8_t* bufLen, uint8_t* from
   if (manager.recvfromAckTimeout(buf, bufLen, timeout, from, to)){
     // Receive successful
     success = true;
-    if (messageIsNew(&buf[0], from[0])){
+    if (messageIsNew(buf, from)){
       // New message, we are interested
-      Serial.println(F("We are interested"));
       duplicate = false;
       printReceived(&buf[0], from[0]);
     }

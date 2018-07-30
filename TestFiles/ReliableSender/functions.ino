@@ -58,6 +58,21 @@ long int getPressure()
   return (long int) BMP.readPressure();
 }
 
+void getPosition(long int &Lat, long int &Lng){
+  int iterator = 0;
+  while (iterator < 4){
+    while(Serial.available())//While there are characters to come from the GPS
+    {
+      gps.encode(Serial.read());//This feeds the serial NMEA data into the library one char at a time
+    }
+    if(gps.location.isUpdated())//This will pretty much be fired all the time anyway but will at least reduce it to only after a package of NMEA data comes in
+    {
+      iterator ++;
+    }
+  }
+  Lat = gps.location.lat() * 100000;
+  Lng = gps.location.lng() * 100000;
+}
 //------------------------------------------------------------------------------------------------------------------------
 
 
@@ -108,7 +123,7 @@ void sendFromEEPROM(){
       }
       else
       {
-        Serial.print(F("Send from memory success"));
+        Serial.println(F("Send from memory success"));
         EEPROM.update(i*100+11,0);       
       }   
     }      
@@ -180,7 +195,7 @@ void goToSafeSleep(){
       Serial.print(F("The clock is: "));
       Serial.println(TimeAlarm.getTimeStamp());
       Serial.println(TimeAlarm.getTime());
-      delay(40);
+      delay(100);
     }
   }
 }

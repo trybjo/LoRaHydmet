@@ -9,7 +9,7 @@
  * A0   -> UNIK 500 (see sketch on github for connection)                                                *
  * A1   -> gpsEnable                                                                                     *
  *                                                                                                       *
- * D3   -> LoRa G0                                                                                       *
+ * D2   -> LoRa G0                                                                                       *
  * D4   -> LoRa RST                                                                                      *
  *                                                                                                       *
  * D5   -> Rwmp&Press SDI (aka. MOSI)                                                                    *
@@ -37,7 +37,7 @@
  * --------------------------------------------------*/
 #define LoRa_CS 10
 #define LoRa_RST 4
-#define LoRa_INT 3
+#define LoRa_INT 2
 
 /*----------------------------------------------*
  * Define, MOSI, MISO, SCK and chip celect pin  *
@@ -52,10 +52,6 @@
  *---------------------------*/
 #define gpsEnable 15 
 
-
-
-
-#define RF95_FREQ 868.0
 #define LoRa_FREQ 868.0
 
 /*---------------------------------------------------------------------------------------------------------------*

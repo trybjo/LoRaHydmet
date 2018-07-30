@@ -29,7 +29,8 @@
  *-------------------------------------------------------------------------------------------------------*/
 
 
-#define RECEIVER_ADDRESS 7
+#define RECEIVER_ADDRESS 5
+#define REPEATER_ADDRESS 6
 
 
 /*---------------------------------------------------*
@@ -103,4 +104,4 @@
 /*--------------------------------------*
  * Change to the length of the message  *
  * -------------------------------------*/
-#define messageLength 15
+#define messageLen 22

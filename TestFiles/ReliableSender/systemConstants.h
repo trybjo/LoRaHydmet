@@ -106,4 +106,4 @@ Adafruit_BMP280 BMP;
 /*--------------------------------------*
  * Change to the length of the message  *
  * -------------------------------------*/
-#define messageLength 15
+#define messageLength 21

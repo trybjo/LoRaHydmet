@@ -58,13 +58,11 @@ bool receive(bool* duplicate, uint8_t* message, uint8_t* bufLen, uint8_t* from, 
   }
   
   if (success){
-    if (!packageInMemory((int)buf[0])){
+    if (messageIsNew(buf, *from)){
+      // New message, we are interested
       *duplicate = false;
-      updatePackageMemory((int)buf[0]);
-//      printReceived(&buf[0], from[0]);
     }
     else {
-      //Serial.println(F("Received duplicate"));
       *duplicate = true;
     }
     return true;
@@ -96,46 +94,6 @@ void sPrintData(uint8_t* input, int usedSize, int startPos, int decimals){
   }
 }
 
-void updatePackageNum(){
-  if (packageNum >= 7){ packageNum = 0;} 
-  else packageNum ++;
-}
-
-long int toPowerOf(int input, int power){
-    long int temp = 1;
-    for (int i = 0; i < power; i++){
-      temp *= input;
-    }
-    return temp; 
-}
-
-void addPackageNum(uint8_t* result, uint8_t* input, int sizeOfInput){
-  result[0] = packageNum;
-  for (int i=0; i< sizeOfInput; i++){
-    result[i+1] = input[i];
-  }
-}
-
-
-void updatePackageMemory(int package){
-  packageMemory[packageMemoryPointer] = package;
-  if (packageMemoryPointer < 3){
-    packageMemoryPointer++;
-  }
-  else packageMemoryPointer = 0;
-}
-
-// Returns 1 if the package is in memory
-int packageInMemory(int package){
-  for (int i = 0; i < 4; i++){
-    if (packageMemory[i] == package){
-      return 1;
-    }
-  }
-  return 0;
-}
-
-
 
 void writeDataToSerial(uint8_t* message){
   //sPrintData(input, usedSize, startPos, decimals);
@@ -161,4 +119,27 @@ void writeDataToSerial(uint8_t* message){
   // Time: 
   sPrintData(message, 4, 11, 0);
   Serial.println();
+  // Latitude: 
+  sPrintData(message, 3, 15, 4);
+  Serial.print(F(","));
+  // Longditude:
+  sPrintData(message, 3, 17, 4);
+  Serial.println();
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -24,6 +24,28 @@ void goToSafeSleep(){
   }
 }
 
+// After performing a reboot/reset, watchdog timer must be turned off to not accidentally reboot again.
+// Put this function at the top of the code in  setup().
+void turnOffWatchdogTimer()
+{
+   MCUSR = 0;
+   wdt_disable();
+
+   return;
+}
+
+// Uses watchdog timer to reset the MCU
+void rebootMCU()
+{      
+  do                          
+  {                           
+     wdt_enable(WDTO_30MS);  
+     for(;;)                 
+     {                       
+     }                       
+  } while(0);
+}
+
 void goToSleep(){
   
   attachInterrupt(digitalPinToInterrupt(wakeUpPin), wakeUp, FALLING);
