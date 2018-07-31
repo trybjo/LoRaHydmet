@@ -65,7 +65,7 @@ void loop() {
   
   byte firstReceiveFromSender = 0; // Byte is filled with ones for each sender 
   // that has send messages. Used to time the first message received
-  while(TimeAlarm.timeDifference() > -90){ 
+  while(TimeAlarm.timeDifference() > -60){ 
     // Receiving for one minute
     // Negative time difference means the alarm has gone off already
     // As the time since alarm increases, the difference becomes more negative
@@ -79,37 +79,10 @@ void loop() {
       bool receiveSuccess = myReceive(duplicate, buf, &bufLen, &from, &to, 300);
 
       // This following should make adjusting time possible
-      
-      Serial.print(F("Received a message at time: "));
-      Serial.println(TimeAlarm.getTime());
-      if (receiveSuccess && !((firstReceiveFromSender >> from) & 1)){
-        // If this is the first message we get from the given sender
-        firstReceiveFromSender |= (1<<from); // Indicate that we now have got a message from the sender
-        int timeDiff = TimeAlarm.timeDifference() + 30 + 2*from;
-        if (abs(timeDiff) > 15){
-          // The time difference from now and when the sender should send message
-          // Is larger than 15 seconds. 
-          // We should send a message to that sender, and ask to change clock time
-          Serial.print(F("We got a message too late: "));
-          Serial.println(timeDiff);
-          // Alternative: 
-          uint8_t message[2];
-          if (timeDiff < 0){
-            message[0] = 0;
-          }
-          else{
-            message[0] = 1;
-          }
-          message[1] = abs(timeDiff);
-          // Alternative end
-          manager.sendtoWaitRepeater(message, sizeof(message), from, (uint8_t)REPEATER_ADDRESS);
-        }        
+      if (receiveSuccess){
+        sendTimingError(firstReceiveFromSender, from);
       }
-      else{
-        Serial.println(F("This is not the first from this sender"));
-      }
-      
-      
+        
       
       if (receiveSuccess && !duplicate && from != RECEIVER_ADDRESS){        
         // We only store messages from the senders             
@@ -132,8 +105,8 @@ void loop() {
   DateTime timeNow = RTC.now();
   if (!(timeNow.day() % 7 ) && EEPROM.read(800) != timeNow.day()){
     // If the date number is dividable by 7
-    // and if this date is last reboot date
-    // Reboot
+    // and if this date is not last reboot date
+    rebootMCU();
   }
   if (!(timeNow.month() % 6 ) && EEPROM.read(801) != timeNow.month()){
     // If the month is dividable by 6

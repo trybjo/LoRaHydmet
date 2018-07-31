@@ -13,6 +13,7 @@
 #include <Wire.h>                   // Library to use I2C communucation.
 #include <SDI12.h>                  // Library for SDI-12 communication
 #include <avr/wdt.h>                // Library for watchdog timer.
+#include <avr/io.h>
 #include <timeAndAlarm.h>           // Functions for handeling timer and alarms
 
 #include "systemConstants.h"        // Constants for the system
@@ -28,10 +29,6 @@ uint8_t packageNum;
 // Don't put this on the stack:
 uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
 
-/*
-uint8_t packageMemory[4]; 
-uint8_t packageMemoryPointer;
-*/
 bool buttonPress = false;
 
 //------------------------------------------------------------------------------------------------------------------------
@@ -48,12 +45,16 @@ void setup()
   
   Serial.begin(9600);
   delay(10);
-  EEPROM.update(98, 0); // Temporary in order to get time every boot.
+  //EEPROM.update(98, 0); // Temporary in order to get time every boot.
   
   if (!EEPROM.read(98)){
     // We have not started the sender before, we need to set the time
     updateClock(1);
   }
+ 
+  updateClock(1);
+  
+  //getPosition();
   
   
   initializeAlarm();
@@ -66,9 +67,10 @@ void setup()
   DateTime timeNow = RTC.now();
   EEPROM.update(800, timeNow.day());      // Indicating last date of reboot
 
-  TimeAlarm.setWakeUpPeriod(0, 3, 1);
+  TimeAlarm.setWakeUpPeriod(0, 3, 0);
   // Set alarm the next 10-minute:
-  TimeAlarm.setAlarm1(3, 15 + 2*SENDER_ADDRESS);
+  // Sender 1 will start up 7 seconds early, 5 seconds for start and reading sensor input
+  TimeAlarm.setAlarm1(3, 2*(SENDER_ADDRESS-2) - 5);
   printAlarm();
 
   Serial.print(F("Time: "));
@@ -76,21 +78,20 @@ void setup()
   Serial.println(F("Sender on"));
   delay(100);
   EEPROM.update(98, 1);
-  goToSleep();
+  goToSafeSleep();
 }
 
 //------------------------------------------------------------------------------------------------------------------------
 
 void loop() 
 {    
-  
   printAlarm();
   Serial.print(F("Woke up at time :"));
   Serial.println(TimeAlarm.getTime());
   delay(2000);
   TimeAlarm.stopAlarm();
   
-  uint8_t data[20]; // Uint8_t [2] can hold values in range 0-65'536
+  uint8_t data[21]; // Uint8_t [2] can hold values in range 0-65'536
   // get() functions return long int. Data requires 15 bytes.
   fillLongIntToPos((long int) packageNum, 1, 0, data); // Adding packet number and adds sensor data to data.
   fillLongIntToPos(getTemperature(), 2, 1, data); // Temp data (2 bytes)
@@ -98,11 +99,7 @@ void loop()
   fillLongIntToPos(getPressure(), 3, 5, data);  // Pressure data (3 bytes)
   fillLongIntToPos(getDepth(), 3, 8, data);     // Depth data  (3 bytes)
   fillLongIntToPos(getTime(), 4, 11, data);     // Time data (4 bytes)
-  long int Lat;
-  long int Lng;
-  //getPosition(Lat, Lng);
-  //fillLongIntToPos(Lat, 3, 15, data);
-  //fillLongIntToPos(Lng, 3, 18, data);           // Position data (3 + 3 byte)
+  fillPositionData(data);                       // Position data (3 + 3 byte)       
                                            
                                             
   
@@ -110,6 +107,7 @@ void loop()
   Serial.println((int)data[0]); // Printing the first part of the message
   
   
+  initializeLoRa();
   
   // Send newly generated data
   if (!manager.sendtoWait(data, sizeof(data), RECEIVER_ADDRESS))
@@ -117,7 +115,6 @@ void loop()
     Serial.println(F("Send unsuccessful")); 
     storeInEEPROM(data, sizeof(data));         
   }
-  Serial.println(F("Done with sending"));
   
   // This following should make adjusting time possible
   
@@ -163,6 +160,7 @@ void loop()
     // If the month is dividable by 6
     // and if this month is not last clock update month
     updateClock(2);
+    getPosition();
     EEPROM.update(801, timeNow.month());
   }
 

@@ -99,7 +99,7 @@ bool initializePacketNum(){
     {
       if(EEPROM.read(50+i) == i)
       {
-        packageNum = i;
+        packageNum = i; 
       }
     }
   }  
@@ -121,7 +121,6 @@ bool updateClock(int mode){
   pinMode(gpsEnable, OUTPUT); // A0
   digitalWrite(gpsEnable, HIGH);
   Serial.println(F("GPS Start"));//Just show to the monitor that the sketch has started
-  Wire.begin();
   if (! RTC.begin()) {
     while (1){
       Serial.println(F("Couldn't find rtc"));
@@ -133,7 +132,7 @@ bool updateClock(int mode){
     {
       gps.encode(Serial.read());//This feeds the serial NMEA data into the library one char at a time
     }
-    if(gps.location.isUpdated())//This will pretty much be fired all the time anyway but will at least reduce it to only after a package of NMEA data comes in
+    if(gps.location.isUpdated() && gps.date.year() != 2000)
     {
       iterator ++;
     }
@@ -144,6 +143,12 @@ bool updateClock(int mode){
   uint8_t hh = gps.time.hour();
   uint8_t Min = gps.time.minute();
   uint8_t sec = gps.time.second();
+  Serial.println(yy);
+  Serial.println(mm);
+  Serial.println(dd);
+  Serial.println(hh);
+  Serial.println(Min);
+  Serial.println(sec);
   RTC.adjust(DateTime(yy, mm, dd, hh, Min, sec));
   digitalWrite(gpsEnable, LOW);
   delay(200);

@@ -58,12 +58,12 @@ bool receive(bool* duplicate, uint8_t* message, uint8_t* bufLen, uint8_t* from, 
   }
   
   if (success){
-    if (messageIsNew(buf, *from)){
+    if (messageIsDuplicate(buf, *from)){
       // New message, we are interested
-      *duplicate = false;
+      *duplicate = true;
     }
     else {
-      *duplicate = true;
+      *duplicate = false;
     }
     return true;
   }
@@ -95,11 +95,17 @@ void sPrintData(uint8_t* input, int usedSize, int startPos, int decimals){
 }
 
 
-void writeDataToSerial(uint8_t* message){
+void writeDataToSerial(uint8_t* message, uint8_t from){
   //sPrintData(input, usedSize, startPos, decimals);
   
   // Signal strength dBm
-  Serial.print((int)lora.lastRssi()); // THis one need to be chagned still
+  Serial.print((int)lora.lastRssi()); // This one need to be changed still
+  Serial.print(F(","));
+  // From: 
+  Serial.print(from);
+  Serial.print(F(","));
+  // Time: 
+  sPrintData(message, 4, 11, 0);
   Serial.print(F(","));
   // Packet number:
   sPrintData(message, 1, 0, 0);
@@ -116,14 +122,11 @@ void writeDataToSerial(uint8_t* message){
   // Debth:
   sPrintData(message, 3, 8, 0);
   Serial.print(F(","));
-  // Time: 
-  sPrintData(message, 4, 11, 0);
-  Serial.println();
   // Latitude: 
-  sPrintData(message, 3, 15, 4);
+  sPrintData(message, 3, 15, 5);
   Serial.print(F(","));
   // Longditude:
-  sPrintData(message, 3, 17, 4);
+  sPrintData(message, 3, 18, 5);
   Serial.println();
 }
 

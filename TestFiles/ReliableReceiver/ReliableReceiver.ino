@@ -3,7 +3,7 @@
 #include <SPI.h>
 #include <LoRa.h>
 #include "systemConstants.h"
-#include <memoryRepeater.h>
+#include <memoryReceiver.h>
 #include <EEPROM.h>
 #include <Wire.h>
 
@@ -51,19 +51,11 @@ void loop() {
     }
     else if (duplicate && from != REPEATER_ADDRESS){
       Serial.println(F("We got a duplicate: "));
-      Serial.print(F("From: "));
-      Serial.print(from);
-      Serial.print(", ");
-      writeDataToSerial(buf);
+      writeDataToSerial(buf, from);
     }
     else if (receiveSuccess && !duplicate && from != REPEATER_ADDRESS){
       writeMessageToMemory(buf, (int)bufLen, from);
-      uint8_t memoryTime[4];
-      
-      Serial.print(F("From: "));
-      Serial.print(from);
-      Serial.print(", ");
-      writeDataToSerial(buf);
+      writeDataToSerial(buf, from);
     }
     // The variable 'duplicate' is not in use yet.
     

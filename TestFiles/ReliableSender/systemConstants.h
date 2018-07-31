@@ -8,7 +8,7 @@
  * D2     -> LoRa G0                                                                                      *
  * D3     -> Clock SQW                                                                                    *
  * D4     -> LoRa RST                                                                                     *
- * D5     ->                                                                                              *
+ * D5     -> Enable SCL/SDA                                                                               *
  * D6     ->                                                                                              *
  * D7     ->                                                                                              *
  * D8     ->                                                                                              *
@@ -35,7 +35,7 @@
  * ----------------------------------------------------*/
  
 #define RH_RF95_MAX_MESSAGE_LEN 29
-#define SENDER_ADDRESS 1 // Range 1 to 4
+#define SENDER_ADDRESS 2 // Range 1 to 4
 #define RECEIVER_ADDRESS 5
 #define REPEATER_ADDRESS 6
 
@@ -56,6 +56,10 @@ RHReliableDatagram manager(lora, SENDER_ADDRESS); // Class to manage message del
 #define depthMOSFETS A1
 SDI12 mySDI12(depthDataPin); // Define the SDI-12 bus
 
+/*
+ * 
+ */
+#define SdaSclEnablePin 5
 /*----------------------------------------------*
  * The BMP sensor uses I2C for communication    *
  *----------------------------------------------*/

@@ -104,7 +104,7 @@ bool updateClock(int mode){
   uint8_t Min = gps.time.minute();
   uint8_t sec = gps.time.second();
   RTC.adjust(DateTime(yy, mm, dd, hh, Min, sec));
-  //digitalWrite(gpsEnable, LOW);
+  //digitalWrite(gpsEnable, LOW); 
   delay(200);
   Serial.println(TimeAlarm.getTimeStamp());
   delay(2000);

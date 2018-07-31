@@ -58,7 +58,8 @@ long int getPressure()
   return (long int) BMP.readPressure();
 }
 
-void getPosition(long int &Lat, long int &Lng){
+// Not tested
+void getPosition(){
   int iterator = 0;
   while (iterator < 4){
     while(Serial.available())//While there are characters to come from the GPS
@@ -70,14 +71,42 @@ void getPosition(long int &Lat, long int &Lng){
       iterator ++;
     }
   }
-  Lat = gps.location.lat() * 100000;
-  Lng = gps.location.lng() * 100000;
+  long int Lat = gps.location.lat() * 100000;
+  long int Lng = gps.location.lng() * 100000;
+  uint8_t positionData[6];
+  fillLongIntToPos(Lat, 3, 0, positionData);
+  fillLongIntToPos(Lng, 3, 3, positionData);
+  for(int i=0; i<8; i++)
+  {
+    for (int j = 0; j < 6; j++)
+    {
+      // Writing the new position data to memory of all packets 
+      EEPROM.update(i*100 + 15 + j, positionData[j]);
+    }
+  }
 }
+
+// Not tested
+void fillPositionData(uint8_t outValue[messageLength]){
+  for (int i = 15; i < 21; i++){
+    outValue[i] = EEPROM.read(i);
+  }
+}
+
 //------------------------------------------------------------------------------------------------------------------------
 
 
 /////////////////// Other functions ///////////////////
 //////////////////////////////////////////////////////
+
+void enableSdaScl(){
+  
+}
+
+void disableSdaScl(){
+  DDRC |= B00110000;
+  PORTC &= B11001111;  
+}
 
 // A mapping function that can return floating (decimal) values.
 float floatMap(float x, float in_min, float in_max, float out_min, float out_max)
@@ -181,8 +210,13 @@ void storeInEEPROM(uint8_t data[], int dataLen)
 
 void goToSafeSleep(){
   bool fakeWakeup = true;
+  
   while (fakeWakeup){
+    disableSdaScl();
+    delay(40);
     goToSleep();
+    //enableSdaScl();
+    
     DateTime timeNow = RTC.now();
     bool correctHour = timeNow.hour() == EEPROM.read(846);
     bool correctMinute = timeNow.minute() == EEPROM.read(847);

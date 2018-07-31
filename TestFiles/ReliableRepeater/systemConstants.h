@@ -8,6 +8,8 @@
  *                                                                                                       *
  * A0   -> UNIK 500 (see sketch on github for connection)                                                *
  * A1   -> gpsEnable                                                                                     *
+ * A2   -> LoRa and DS3231 power switch                                                                  *
+ * A3   -> GPS power switch                                                                              * 
  *                                                                                                       *
  * D2   -> LoRa G0                                                                                       *
  * D4   -> LoRa RST                                                                                      *
@@ -28,6 +30,14 @@
  *-------------------------------------------------------------------------------------------------------*/
 
 
+/*-----------------------------------------------------*
+ * Sender and receiver address for the LoRa module     *
+ * Also defines maximum packet size, 22 byte for data, *
+ * 1 byte for message length, 4 bytes header and 2 FCS *
+ * Definition of RH_RF95_MAX_MESSAGE_LEN: RH_RF95.h    *
+ * ----------------------------------------------------*/
+ 
+#define RH_RF95_MAX_MESSAGE_LEN 29
 #define RECEIVER_ADDRESS 5
 #define REPEATER_ADDRESS 6
 

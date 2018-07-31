@@ -59,3 +59,52 @@ void sendFromMemory(uint8_t author, uint8_t endDest){
     }
   }
 }
+
+void sendTimingError(byte &firstReceive, uint8_t from){
+  Serial.print(F("Received a message at time: "));
+  Serial.println(TimeAlarm.getTime());
+  if (!((firstReceive >> from) & 1)){
+    // If this is the first message we get from the given sender
+    firstReceive |= (1<<from); // Indicate that we now have got a message from the sender
+    int timeDiff = TimeAlarm.timeDifference() + 30 + 2*(from-2);
+    // The repeater starts 30 seconds early, the senders are off by 2*(from-2) seconds 
+    if (abs(timeDiff) > 15){
+      // The time difference from now and when the sender should send message
+      // Is larger than 15 seconds. 
+      // We should send a message to that sender, and ask to change clock time
+      Serial.print(F("We got a message too late: "));
+      Serial.println(timeDiff);
+      uint8_t message[2];
+      if (timeDiff < 0){
+        message[0] = 0;
+      }
+      else{
+        message[0] = 1;
+      }
+      message[1] = abs(timeDiff);
+      manager.sendtoWaitRepeater(message, sizeof(message), from, (uint8_t)REPEATER_ADDRESS);
+    }        
+  }
+  else{
+    Serial.println(F("This is not the first from this sender"));
+  }   
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

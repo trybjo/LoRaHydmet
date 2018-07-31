@@ -28,7 +28,7 @@
  * SCL  -> Humidity sensor pin 4 (from left, seen from side with holes)                                  *
  *-------------------------------------------------------------------------------------------------------*/
 
-
+#define RH_RF95_MAX_MESSAGE_LEN 29
 #define RECEIVER_ADDRESS 5
 #define REPEATER_ADDRESS 6
 
