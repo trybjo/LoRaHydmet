@@ -7,20 +7,20 @@
  * TX/D1  -> GPS RX                                                                                       *
  * D2     -> LoRa G0                                                                                      *
  * D3     -> Clock SQW                                                                                    *
- * D4     -> LoRa RST                                                                                     *
- * D5     -> Enable SCL/SDA                                                                               *
- * D6     ->                                                                                              *
- * D7     ->                                                                                              *
+ * D4     -> Power Clock                                                                                     *
+ * D5     -> OTT Signal multiplexer                                                                               *
+ * D6     -> Power Humidity                                                                                             *
+ * D7     -> Power Temp&Press                                                                                           *
  * D8     ->                                                                                              *
- * D9     ->                                                                                              *
+ * D9     -> LoRa RST                                                                                             *
  * D10    -> LoRa CS                                                                                      *
  * D11    -> LoRa MOSI                                                                                    *
  * D12    -> LoRa MISO                                                                                    *
  * D13    -> LoRa SCK                                                                                     *
  * A0     -> OTT (depth measure) signal cable (gray)                                                      *
  * A1     -> OTT (depth measure) MOSFETs                                                                  *
- * A2     ->                                                                                              *
- * A3     ->                                                                                              *
+ * A2     -> GPS MOSFET                                                                                             *
+ * A3     -> LoRa MOSFET                                                                                             *
  * SDA/A4 -> Humidity sensor pin 2 (from left, seen from side with holes) + Clock SDA + Temp/Press SDI    *
  * SCL/A5 -> Humidity sensor pin 4 (from left, seen from side with holes) + Clock SCL + Temp/Press SCK    *
  *--------------------------------------------------------------------------------------------------------*/
@@ -44,7 +44,7 @@
  * Define pins for chip select, reset and interrupt  *
  * --------------------------------------------------*/
 #define LoRa_CS 10
-#define LoRa_RST 4
+#define LoRa_RST 9
 #define LoRa_INT 2
 RH_RF95 lora(LoRa_CS, LoRa_INT); // Singleton instance of the radio driver.
 RHReliableDatagram manager(lora, SENDER_ADDRESS); // Class to manage message delivery and receipt,using the lora declared above.
@@ -53,30 +53,22 @@ RHReliableDatagram manager(lora, SENDER_ADDRESS); // Class to manage message del
  * Define pins for chip select, reset and interrupt  *
  * --------------------------------------------------*/
 #define depthDataPin A0
-#define depthMOSFETS A1
+#define depthMOSFET A1
+#define depthMultiplexer 5
 SDI12 mySDI12(depthDataPin); // Define the SDI-12 bus
 
-/*
- * 
- */
-#define SdaSclEnablePin 5
+
 /*----------------------------------------------*
  * The BMP sensor uses I2C for communication    *
  *----------------------------------------------*/
-
 Adafruit_BMP280 BMP;
-
-/*---------------------------*
- * Set gpsEnable pin to A2   *
- *---------------------------*/
-#define gpsEnable A2 
-
+#define GPSMosfetPin A2
 
 
 /*---------------------------*
  * Set LoRa frequenzy [MHz]  *
  *---------------------------*/
-#define LoRa_FREQ 868.0
+#define LoRa_FREQ 870.1
 
 
 /* ----------------------------------------------------------------------------------------------*

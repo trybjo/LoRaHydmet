@@ -7,7 +7,7 @@ int getDepth()
   String getData = "?D0!";
   String SDI_Response = "";
   String SDI_Response_Stripped = "";
-  digitalWrite(depthMOSFETS, HIGH);
+ 
   delay(5000);
   mySDI12.sendCommand(startMeasurements);
   delay(3000); // Allow three seconds for measuring
@@ -31,7 +31,6 @@ int getDepth()
   SDI_Response = "";
   SDI_Response_Stripped = "";
   mySDI12.clearBuffer();
-  digitalWrite(depthMOSFETS, LOW);
   delay(5);
   Serial.print(F("Depth = "));
   Serial.println(depth);
@@ -42,24 +41,37 @@ int getDepth()
 // Returns the humidity [%].
 long int getHumidity()
 {
-
-  return (long int) (am2320.readHumidity() * 10 ) ;
+  delay(800); // Needs 800ms of power before getting readings. Will otherwise return 0.
+  long int humidity = (am2320.readHumidity() * 10 );
+  delay(10);
+  return humidity;
 }
 
 // Returns temperature [*C] with two decimals precision.
 long int getTemperature()
 {
-  return (long int) (BMP.readTemperature() * 100);
+  delay(50);
+  long int temp = (BMP.readTemperature() * 100);
+  delay(10);
+  return temp;
 }
 
 // Returns pressure [Pa].
 long int getPressure()
 {
-  return (long int) BMP.readPressure();
+  delay(50);
+  long int pressure = BMP.readPressure();
+  delay(10);
+  return pressure;
 }
 
 // Not tested
 void getPosition(){
+  pinMode(GPSMosfetPin,OUTPUT);
+  digitalWrite(GPSMosfetPin, HIGH);
+  delay(50);
+  //DDRD &= 00000010; // Set tx as outport 
+  
   int iterator = 0;
   while (iterator < 4){
     while(Serial.available())//While there are characters to come from the GPS
@@ -73,6 +85,8 @@ void getPosition(){
   }
   long int Lat = gps.location.lat() * 100000;
   long int Lng = gps.location.lng() * 100000;
+  Serial.println(Lat);
+  Serial.println(Lng);
   uint8_t positionData[6];
   fillLongIntToPos(Lat, 3, 0, positionData);
   fillLongIntToPos(Lng, 3, 3, positionData);
@@ -84,6 +98,7 @@ void getPosition(){
       EEPROM.update(i*100 + 15 + j, positionData[j]);
     }
   }
+  digitalWrite(GPSMosfetPin, LOW);
 }
 
 // Not tested
@@ -99,14 +114,6 @@ void fillPositionData(uint8_t outValue[messageLength]){
 /////////////////// Other functions ///////////////////
 //////////////////////////////////////////////////////
 
-void enableSdaScl(){
-  
-}
-
-void disableSdaScl(){
-  DDRC |= B00110000;
-  PORTC &= B11001111;  
-}
 
 // A mapping function that can return floating (decimal) values.
 float floatMap(float x, float in_min, float in_max, float out_min, float out_max)
@@ -212,15 +219,22 @@ void goToSafeSleep(){
   bool fakeWakeup = true;
   
   while (fakeWakeup){
-    disableSdaScl();
+    // setMostPinsToINPUT_PULLUP();
     delay(40);
+    // Set Clock power pin (OUTPUT, LOW)
+    DDRD |= B00010000; // Set output
+    PORTD &= B11101111; // Set low
     goToSleep();
-    //enableSdaScl();
-    
+    Serial.println(F("INSIDE"));
+    // Set Clock power pin (OUTPUT, HIGH)
+    DDRD |= B00010000; // Set output
+    PORTD |= B00010000; // Set high
+    pinMode(clockInterruptPin, INPUT); // Needed?
+    // RTC.writeSqwPinMode(DS3231_OFF); // Needed?
     DateTime timeNow = RTC.now();
     bool correctHour = timeNow.hour() == EEPROM.read(846);
     bool correctMinute = timeNow.minute() == EEPROM.read(847);
-    bool correctSecond = timeNow.second() == EEPROM.read(848);    
+    bool correctSecond = timeNow.second() == EEPROM.read(848);   
     if (correctHour && correctMinute && correctSecond){
       fakeWakeup = false;
     }
@@ -234,9 +248,26 @@ void goToSafeSleep(){
   }
 }
 
+void setMostPinsToINPUT_PULLUP()
+{
+  // Interrupt and OTT_signal_multiplexer not set with pullup
+  DDRD &= B00000000;
+  PORTD |= B11010011;
+
+  // Crystal pins are untouched
+  DDRB &= B11000000;
+  PORTB |= B00111111;
+
+  // MOSFET pins set as OUTPUT LOW, 
+  DDRC &= B11111110;
+  DDRC |= B00111110;
+  PORTC |= B00000001; 
+  PORTC &= B11000001; 
+}
+
 void goToSleep()
 {
-  attachInterrupt(digitalPinToInterrupt(clockInterruptPin), wakeUp, LOW);
+  attachInterrupt(digitalPinToInterrupt(clockInterruptPin), wakeUp, FALLING);
   // Disable ADC
   ADCSRA &= ~(1<<7);
   
@@ -249,21 +280,13 @@ void goToSleep()
   MCUCR = (MCUCR & ~(1<<5)) | (1<<6); // Then set the BODS bit and clear the BODSE bit at the same time
   __asm__ __volatile__("sleep"); // In line assembler sleep execute instruction
   detachInterrupt(digitalPinToInterrupt(clockInterruptPin));
-  /*
-  // Allow wake up pin to trigger interrupt on low.
-  attachInterrupt(0, wakeUp, FALLING);
-
-  // Enter power down state with ADC and BOD module disabled.
-  // Wake up when wake up pin is low.
-  LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF); 
-  detachInterrupt(0); 
-  */
 }
 
 void wakeUp()
 {  
   // Just a handler for the pin interrupt.
 }
+
 
 void stopAlarm(){
   RTC.armAlarm(1, false);

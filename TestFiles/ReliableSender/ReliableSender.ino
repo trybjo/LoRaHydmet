@@ -29,55 +29,53 @@ uint8_t packageNum;
 // Don't put this on the stack:
 uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
 
-bool buttonPress = false;
 
 //------------------------------------------------------------------------------------------------------------------------
 
 void setup() 
 {
-  while(buttonPress){
-    for (int i = 0; i < 1000; i++){
-      EEPROM.update(i, 0);
-    }
-  }
-  
-  turnOffWatchdogTimer();
-  
   Serial.begin(9600);
+  Serial.println(F("Test"));
+  turnOffWatchdogTimer();
+/*
+  // Set LoRa MOSFET pin
+  DDRC |= B00001000; // Set output
+  PORTC |= B00001000; // Set high
+  delay(500);
+*/
+  // Set Clock power pin (OUTPUT, HIGH)
+  DDRD |= B00010000; // Set output
+  PORTD |= B00010000; // Set high
+  
+
   delay(10);
   //EEPROM.update(98, 0); // Temporary in order to get time every boot.
   
   if (!EEPROM.read(98)){
     // We have not started the sender before, we need to set the time
     updateClock(1);
+    EEPROM.update(98, 1);
   }
- 
-  updateClock(1);
   
+  updateClock(1);
   //getPosition();
   
   
-  initializeAlarm();
-  initializeLoRa();
-  initializeTempAndPressure();
-  initializeHumidity();
-  initializeWaterPressureSensor();
   initializePacketNum();
 
   DateTime timeNow = RTC.now();
   EEPROM.update(800, timeNow.day());      // Indicating last date of reboot
 
-  TimeAlarm.setWakeUpPeriod(0, 3, 0);
+  TimeAlarm.setWakeUpPeriod(0, 1, 0);
   // Set alarm the next 10-minute:
   // Sender 1 will start up 7 seconds early, 5 seconds for start and reading sensor input
-  TimeAlarm.setAlarm1(3, 2*(SENDER_ADDRESS-2) - 5);
+  TimeAlarm.setAlarm1(1, 2*(SENDER_ADDRESS-2) - 15);
   printAlarm();
 
   Serial.print(F("Time: "));
   Serial.println(TimeAlarm.getTimeStamp());
   Serial.println(F("Sender on"));
   delay(100);
-  EEPROM.update(98, 1);
   goToSafeSleep();
 }
 
@@ -85,30 +83,71 @@ void setup()
 
 void loop() 
 {    
+   // Set Clock power pin (OUTPUT, HIGH)
+  DDRD |= B00010000; // Set output
+  PORTD |= B00010000; // Set high
+  
+  delay(50);
+  initializeAlarm();
   printAlarm();
   Serial.print(F("Woke up at time :"));
   Serial.println(TimeAlarm.getTime());
   delay(2000);
-  TimeAlarm.stopAlarm();
   
   uint8_t data[21]; // Uint8_t [2] can hold values in range 0-65'536
   // get() functions return long int. Data requires 15 bytes.
   fillLongIntToPos((long int) packageNum, 1, 0, data); // Adding packet number and adds sensor data to data.
+  
+  DDRD |= B10000000; // Set output
+  PORTD |= B10000000; // Set high
+  initializeTempAndPressure();
   fillLongIntToPos(getTemperature(), 2, 1, data); // Temp data (2 bytes)
-  fillLongIntToPos(getHumidity(), 2, 3, data);  // Humidity data (2 byte)
+  DDRD &= B01111111; // Set input
+  PORTD &= B11111111; // Set pullup (not needed, just to show)
+
+  DDRD |= B10000000; // Set output
+  PORTD |= B10000000; // Set high
+  initializeTempAndPressure();
   fillLongIntToPos(getPressure(), 3, 5, data);  // Pressure data (3 bytes)
+  DDRD &= B01111111; // Set input
+  PORTD &= B11111111; // Set pullup (not needed, just to show)
+
+  DDRD |= B01000000; // Set output
+  PORTD |= B01000000; // Set high
+  initializeHumidity();
+  fillLongIntToPos(getHumidity(), 2, 3, data);  // Humidity data (2 byte)
+  DDRD &= B10111111; // Set input
+  PORTD &= B11111111; // Set pullup (not needed, just to show)
+  
+  initializeWaterPressureSensor();
+
+  // Set Depth MOSFET and Multiplexer as Output
+  DDRC |= B00000010; // Set MOSFET output
+  DDRD |= B00100000; // Set Multiplexer output
+  // Set Depth MOSFET and Multiplexer high
+  PORTC |= B00000010; // Set MOSFET high
+  PORTD |= B00100000; // Set Multiplexer high
+  Serial.println(F("Going to get depth"));
   fillLongIntToPos(getDepth(), 3, 8, data);     // Depth data  (3 bytes)
+  PORTC &= B11111101; // Set MOSFET low
+  PORTD &= B11011111; // Set Multiplexer low
+  Serial.println(F("Should have gotten depth"));
+  
   fillLongIntToPos(getTime(), 4, 11, data);     // Time data (4 bytes)
   fillPositionData(data);                       // Position data (3 + 3 byte)       
                                            
                                             
-  
+  /*
   Serial.print(F("\nMessage generated, with number: "));
   Serial.println((int)data[0]); // Printing the first part of the message
+  */
   
+  // Set LoRa MOSFET pin
+  DDRC |= B00001000; // Set output
+  PORTC |= B00001000; // Set high
+  delay(500);
   
   initializeLoRa();
-  
   // Send newly generated data
   if (!manager.sendtoWait(data, sizeof(data), RECEIVER_ADDRESS))
   {     
@@ -164,7 +203,18 @@ void loop()
     EEPROM.update(801, timeNow.month());
   }
 
+  // Set LoRa MOSFET pin
+  DDRC |= B00001000; // Set output
+  PORTC &= B11110111; // Set low
+
+
+  // Set Clock power pin (OUTPUT, LOW)
+  DDRD |= B00010000; // Set output
+  PORTD &= B11101111; // Set low
+  Serial.println(F("Going to sleep at the bottom"));
+
   goToSafeSleep();
+  Serial.println(F("Woke up at the bottom"));
   
 }
 

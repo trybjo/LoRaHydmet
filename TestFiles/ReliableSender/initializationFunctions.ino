@@ -68,17 +68,14 @@ void initializeAlarm()
 
 	// Set interrupt mode
 	RTC.writeSqwPinMode(DS3231_OFF);
-
-	// Set alarm1. (alarmType, sec-5, min, hour, 1); 
-	// Last argument, the day, is ignored, but it still requires an argument. 0 means every.
-	RTC.setAlarm(ALM1_MATCH_HOURS, 8, 9, 0, 1);
-	RTC.alarmInterrupt(1, true);
 }
 
 void initializeWaterPressureSensor()
 {
-	pinMode(depthMOSFETS, OUTPUT);
-	digitalWrite(depthMOSFETS, LOW);
+	pinMode(depthMOSFET, OUTPUT);
+  digitalWrite(depthMOSFET, LOW);
+  pinMode(depthMultiplexer,OUTPUT);
+  digitalWrite(depthMultiplexer,LOW);
 	mySDI12.begin();
 	delay(20);
 }
@@ -117,9 +114,8 @@ bool updateClock(int mode){
   }
   else
   {
+  // DDRD &= 00000010; // Set tx as outport 
   Wire.begin();
-  pinMode(gpsEnable, OUTPUT); // A0
-  digitalWrite(gpsEnable, HIGH);
   Serial.println(F("GPS Start"));//Just show to the monitor that the sketch has started
   if (! RTC.begin()) {
     while (1){
@@ -150,8 +146,6 @@ bool updateClock(int mode){
   Serial.println(Min);
   Serial.println(sec);
   RTC.adjust(DateTime(yy, mm, dd, hh, Min, sec));
-  digitalWrite(gpsEnable, LOW);
-  delay(200);
   Serial.println(TimeAlarm.getTimeStamp());
   delay(2000);
   }
