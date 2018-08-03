@@ -34,20 +34,20 @@ uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
 
 void setup() 
 {
+  turnOffWatchdogTimer();
   Serial.begin(9600);
   Serial.println(F("Test"));
-  turnOffWatchdogTimer();
-/*
-  // Set LoRa MOSFET pin
-  DDRC |= B00001000; // Set output
-  PORTC |= B00001000; // Set high
-  delay(500);
-*/
+  
+// Set pinMode:
+   DDRD |= B00010000; // Set Clock output
+   DDRD |= B10000000; // Set Temp&Press output
+   DDRC |= B00000100; // Set GPS MOSFET as output
+
+
+
   // Set Clock power pin (OUTPUT, HIGH)
-  DDRD |= B00010000; // Set output
   PORTD |= B00010000; // Set high
   
-
   delay(10);
   //EEPROM.update(98, 0); // Temporary in order to get time every boot.
   
@@ -56,10 +56,19 @@ void setup()
     updateClock(1);
     EEPROM.update(98, 1);
   }
+
+  Serial.println(F("The GPS is now off"));
+  delay(3000);
+  Serial.println(F("The GPS will now be turned on"));
+  delay(50);
   
+  // GPS Mosfet
+  //PORTC |= B00000100; // Set to high
+  // getPosition();
+  //PORTC &= B11111011; // Set to low
+  //Serial.println(F("The GPS is now off again"));
+
   updateClock(1);
-  //getPosition();
-  
   
   initializePacketNum();
 
@@ -69,7 +78,7 @@ void setup()
   TimeAlarm.setWakeUpPeriod(0, 1, 0);
   // Set alarm the next 10-minute:
   // Sender 1 will start up 7 seconds early, 5 seconds for start and reading sensor input
-  TimeAlarm.setAlarm1(1, 2*(SENDER_ADDRESS-2) - 15);
+  TimeAlarm.setAlarm1(1, 2*(SENDER_ADDRESS-2));
   printAlarm();
 
   Serial.print(F("Time: "));
@@ -83,9 +92,17 @@ void setup()
 
 void loop() 
 {    
-   // Set Clock power pin (OUTPUT, HIGH)
-  DDRD |= B00010000; // Set output
-  PORTD |= B00010000; // Set high
+
+// Set pinMode wakeUp:
+  DDRD |= B00010000; // Set Clock output
+  DDRD |= B10000000; // Set Temp&Press output
+  DDRC |= B00000100; // Set GPS MOSFET as output
+
+// Set pinMode sleep:
+
+
+  
+  PORTD |= B00010000; // Set Clock high (output)
   
   delay(50);
   initializeAlarm();
@@ -98,14 +115,14 @@ void loop()
   // get() functions return long int. Data requires 15 bytes.
   fillLongIntToPos((long int) packageNum, 1, 0, data); // Adding packet number and adds sensor data to data.
   
-  DDRD |= B10000000; // Set output
-  PORTD |= B10000000; // Set high
+  
+  PORTD |= B10000000; // Set Temp&Press high (output)
   initializeTempAndPressure();
   fillLongIntToPos(getTemperature(), 2, 1, data); // Temp data (2 bytes)
   DDRD &= B01111111; // Set input
   PORTD &= B11111111; // Set pullup (not needed, just to show)
 
-  DDRD |= B10000000; // Set output
+  
   PORTD |= B10000000; // Set high
   initializeTempAndPressure();
   fillLongIntToPos(getPressure(), 3, 5, data);  // Pressure data (3 bytes)

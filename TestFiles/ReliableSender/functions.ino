@@ -27,6 +27,7 @@ int getDepth()
   SDI_Response_Stripped += SDI_Response[9];
   SDI_Response_Stripped += SDI_Response[10];
   int depth = SDI_Response_Stripped.toInt();
+  Serial.println(SDI_Response);
   delay(5);
   SDI_Response = "";
   SDI_Response_Stripped = "";
@@ -101,7 +102,6 @@ void getPosition(){
   digitalWrite(GPSMosfetPin, LOW);
 }
 
-// Not tested
 void fillPositionData(uint8_t outValue[messageLength]){
   for (int i = 15; i < 21; i++){
     outValue[i] = EEPROM.read(i);
