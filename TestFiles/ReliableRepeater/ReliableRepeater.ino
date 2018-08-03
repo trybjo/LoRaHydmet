@@ -12,6 +12,7 @@
 #include <Adafruit_Sensor.h>
 #include <Wire.h>
 #include <avr/wdt.h>                // Library for watchdog timer.
+#include <avr/io.h>
 
 
 RTC_DS3231 RTC;                                               // Instanciate the external clock
@@ -27,39 +28,54 @@ uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
 
 void setup() {
   turnOffWatchdogTimer();
-  
+  setAwakePinConfig();
   Serial.begin(9600);
   while (!Serial); // Wait for serial port to be available
-  
 
+  
+  //DDRB &= ~(1 << (INIT_BUTTON - 8)); // Set pin 0 (digital 8) to input (0)
+  //if (DDRB >> INIT_BUTTON - 8){ // Read digital pin 8
+  pinMode(INIT_BUTTON, INPUT);
+  if (digitalRead(INIT_BUTTON)){
+    Serial.println("Here");
+    // Button is being pressed
+    // First time starting the repeater
+    whipeMemory();
+    activateClock();
+    updateClock(2);
+  }
+  // Temporarily
+  activateClock();
+  updateClock(1);
+  //////////////
+  
+  initializeLoRa();
+  activateClock();
+    
   DateTime timeNow = RTC.now();
   EEPROM.update(800, timeNow.day());      // Indicating last date of reboot
   
-  initializeLoRa();
-  if (initializeMemory()){
-    // First time starting the repeater
-    // updateClock(2);
-    Serial.println(F("First time, initializing values to zero"));
-    delay(50);
-  }
-  updateClock(1);
-  Serial.println(TimeAlarm.getTimeStamp());
   initializeAlarm();
 
   TimeAlarm.setWakeUpPeriod(0, 3, 0);  
-  TimeAlarm.setAlarm1(3, -30); // Set alarm 30 seconds before the next 5-minute:
+  TimeAlarm.setAlarm1(3, -30); // Set alarm 30 seconds before the next 3-minute:
+
   
+  Serial.println(TimeAlarm.getTimeStamp());
   printAlarm();
   Serial.println(F("Setup repeater completed"));
   delay(100);
-  goToSleep();
+  
+  goToSafeSleep();
 }
 
 void loop() {
+  setAwakePinConfig();
+  activateClock();
 
   TimeAlarm.stopAlarm();
+  initializeLoRa();
   printAlarm();
-  
   Serial.print(F("Woke up at time :"));
   Serial.println(TimeAlarm.getTime());
   
@@ -81,8 +97,7 @@ void loop() {
       // This following should make adjusting time possible
       if (receiveSuccess){
         sendTimingError(firstReceiveFromSender, from);
-      }
-        
+      }        
       
       if (receiveSuccess && !duplicate && from != RECEIVER_ADDRESS){        
         // We only store messages from the senders             
@@ -96,8 +111,7 @@ void loop() {
     }
   }
   
-  Serial.print(F("Stopped listening at :"));
-  
+  Serial.print(F("Stopped listening at: "));
   Serial.println(TimeAlarm.getTime());
   
   sendFromMemory();

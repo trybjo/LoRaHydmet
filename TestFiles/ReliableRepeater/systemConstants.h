@@ -6,29 +6,38 @@
  * GND  -> Humidity sensor pin 3 (from left, seen from side with holes)                                  *
  * 5V   -> Humidity sensor pin 1 (from left, seen from side with holes) + Temp&Press VIN + LoRa VIN      *
  *                                                                                                       *
- * A0   -> UNIK 500 (see sketch on github for connection)                                                *
- * A1   -> gpsEnable                                                                                     *
- * A2   -> LoRa and DS3231 power switch                                                                  *
- * A3   -> GPS power switch                                                                              * 
+ * A0   ->                                                 *
+ * A1   ->                                                                                               *
+ * A2   -> GPS power switch                                                                 *
+ * A3   -> LoRa power switch                                                                               
+ 
+ * D1                                                                                                      *
+ * D2   -> LoRa G0                                                                                       
+ * D3   -> Clock interrupt                                                                               *
+ * D4   -> clockPowerPin                                                                                      *
  *                                                                                                       *
- * D2   -> LoRa G0                                                                                       *
- * D4   -> LoRa RST                                                                                      *
- *                                                                                                       *
- * D5   -> Rwmp&Press SDI (aka. MOSI)                                                                    *
- * D6   -> Temp&Press SDO (aka. MISO)                                                                    *
- * D7   -> Temp&Press SCK                                                                                *
- * D8   -> Temp&Press CS                                                                                 *
- * D9   -> MOSFET Gate                                                                                   *
+ * D5   ->                                                                    *
+ * D6   ->                                                               *
+ * D7   ->                                                                                *
+ * D8   -> INIT_BUTTON                                                                                *
+ * D9   -> LoRa RST                                                                                   *
  * D10  -> LoRa CS                                                                                       *
  * D11  -> LoRa MOSI                                                                                     *
  * D12  -> LoRa MISO                                                                                     *
  * D13  -> LoRa SCK                                                                                      * 
  *                                                                                                       *
- *                                                                                                       *
- * SDA  -> Humidity sensor pin 2 (from left, seen from side with holes)                                  *
- * SCL  -> Humidity sensor pin 4 (from left, seen from side with holes)                                  *
+ *                                                                                                       
+ *                                                                                                       * 
+ * RX   -> GPS TX                                                                                                      
+ * TX   -> GPS RX                                                                                        *
+ * SDA  -> Clock SDA                                                                                     *
+ * SCL  -> Clock SCL                                                                                     *
  *-------------------------------------------------------------------------------------------------------*/
 
+/*------------------------------------------------------------*
+ *  Pin set to high causes the system to boot in startup-mode *
+ *------------------------------------------------------------*/
+#define INIT_BUTTON 8
 
 /*-----------------------------------------------------*
  * Sender and receiver address for the LoRa module     *
@@ -46,23 +55,22 @@
  * Define pins for chip select, reset and interrupt  *
  * --------------------------------------------------*/
 #define LoRa_CS 10
-#define LoRa_RST 4
+#define LoRa_RST 9
 #define LoRa_INT 2
+#define LoRa_POWER 3
 
-/*----------------------------------------------*
- * Define, MOSI, MISO, SCK and chip celect pin  *
- *----------------------------------------------*/
-#define BMP_MOSI 5
-#define BMP_MISO 6
-#define BMP_SCK 7
-#define TempAndPressure_CS 8
+
+/*-----------------------------------------------------*
+ * digital pin set high to supply current to the clock *
+ *-----------------------------------------------------*/
+#define clockPowerPin 4
 
 /*---------------------------*
  * Set gpsEnable pin to A0   *
  *---------------------------*/
-#define gpsEnable 15 
+#define GPS_POWER 2 
 
-#define LoRa_FREQ 868.0
+#define LoRa_FREQ 870.1
 
 /*---------------------------------------------------------------------------------------------------------------*
  *                                       Water level sensor                                                      *

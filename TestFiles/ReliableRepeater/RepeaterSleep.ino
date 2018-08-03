@@ -1,12 +1,15 @@
 
 void wakeUp(){  
-  // Just a handler for the pin interrupt.
+  // Wake up precedure
+  activateClock();
+  
 }
 
 void goToSafeSleep(){
   bool fakeWakeup = true;
   while (fakeWakeup){
     goToSleep();
+    
     DateTime timeNow = RTC.now();
     bool correctHour = timeNow.hour() == EEPROM.read(846);
     bool correctMinute = timeNow.minute() == EEPROM.read(847);
@@ -51,6 +54,11 @@ void goToSleep(){
   attachInterrupt(digitalPinToInterrupt(wakeUpPin), wakeUp, FALLING);
   // Disable ADC
   ADCSRA &= ~(1<<7);
+
+  // Set all possible pins as input
+  setSleepConfig();
+  // Pull all input pins high
+  //setAllInportsHigh();
   
   // Go to deep sleep
   SMCR |= (1<<2); // Power down mode
@@ -62,4 +70,22 @@ void goToSleep(){
   __asm__ __volatile__("sleep"); // In line assembler sleep execute instruction
   detachInterrupt(digitalPinToInterrupt(wakeUpPin));
 }
+void setAwakePinConfig(){
+  DDRC = B00111100;
+  DDRB = B00111110;
+  DDRD = B00000000;  
+}
+
+void setSleepConfig(){
+  DDRC = B00001100;
+  DDRB = B00000000;
+  DDRD = B00010000;
+}
+
+void setAllInportsHigh(){
+  PORTC = ~DDRC;
+  PORTB = ~DDRB;
+  PORTD = ~DDRD;
+}
+
 
