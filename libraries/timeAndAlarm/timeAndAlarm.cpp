@@ -20,6 +20,7 @@ long int timeAndAlarm::getTimeStamp(){
   timeInt += (long)timeNow.hour()*100 + (long) timeNow.minute();
   return timeInt; 
 }
+
 long int timeAndAlarm::getTime(){
   DateTime timeNow = _RTC.now();
   return (long) timeNow.minute() * 100 + (long) timeNow.second();
@@ -60,27 +61,55 @@ void timeAndAlarm::adjustWakeUpTime(long int seconds){
 
 void timeAndAlarm::setAlarm1(int period, int secondOffset){
   DateTime timeNow = _RTC.now();
+  int secondNow = timeNow.second();
   int minuteNow = timeNow.minute();
   int hourNow = timeNow.hour();
-  
-  if (period > 30){
-    setAlarm1(hourNow+1, 0, secondOffset);
-  }
-  else if (secondOffset < 0 && minuteNow > 1){
-    setAlarm1(timeNow.hour(), ((int)(minuteNow/period)+1)*period - 1, secondOffset + 60);
-  }
-  else if (minuteNow < 59-period){
-    // We can add the period without reaching a new hour
-    setAlarm1(timeNow.hour(), ((int)(minuteNow/period)+1)*period, secondOffset);
-  }
-  else {
-    if (hourNow == 23){
-      setAlarm1(0, 0, secondOffset);
+
+  int secondChange = 0; // Indicating if a minute has to be subtracted somewhere
+  if (secondOffset < 0 && secondNow > 60 + secondOffset){
+    // The second we are in causes to have to choose next minute
+    secondOffset += 60;
+    if (minuteNow < 59){
+      minuteNow ++;
+      secondChange ++;
     }
     else{
-      setAlarm1(hourNow+1, 0, secondOffset);
+      minuteNow = 0;
+      hourNow ++;
+      secondChange ++;
     }
-  }  
+  }
+  else if (secondOffset < 0){
+    secondOffset += 60;
+    secondChange ++;
+  }
+  // The variable 'secondOffset' is now always positive
+  
+  if (period > 30 && !secondChange){
+    setAlarm1(hourNow+1, 0, secondOffset);
+  }
+  else if (period > 30 && secondChange && secondNow < secondChange){
+    setAlarm1(hourNow, 59, secondOffset);
+  }
+  else if (period > 30 && secondChange){
+    setAlarm1(hourNow+1, 59, secondOffset);
+  }
+  else if (minuteNow == 0 ){
+    setAlarm1(hourNow, period - secondChange, secondOffset);
+  }
+  else if (minuteNow < 59 - period - secondChange){
+    setAlarm1(hourNow, ((int)(minuteNow/period)+1)*period - secondChange, secondOffset);
+  }
+
+  else if(secondChange) {
+    setAlarm1(hourNow, 59, secondOffset);
+  }
+  else if (hourNow == 23){
+    setAlarm1(0, period-secondChange, secondOffset);
+  }
+  else{
+    setAlarm1(hourNow+1, 0, secondOffset);
+  }
 }
 
 void timeAndAlarm::setAlarm1(int wHour, int wMinute, int wSec){
