@@ -49,6 +49,18 @@ void fillPositionData(uint8_t outValue[messageLength]){
 void goToSleep()
 {
   attachInterrupt(digitalPinToInterrupt(clockInterruptPin), wakeUpRoutine, LOW);
+  // Set pinMode:
+  DDRB &= B11000000; // Not touching crystal
+  DDRC &= B10000000; // Not touching unknown pin
+  DDRC |= B00110000; // Setting SCL and SDA as output
+  DDRD &= B00000000; // 
+
+  PORTB |= B00111111; // Not touching crystal
+  PORTC |= B01111111; // Not touching unknown pin
+  PORTC &= B11001111; // Setting SCL and SDA as LOW
+  PORTD |= B11111111; //
+  delay(10);
+  
   // Disable ADC
   ADCSRA &= ~(1<<7);
   
@@ -60,12 +72,13 @@ void goToSleep()
   MCUCR |= (3<<5); // Set both BODS and BODSE at the same time
   MCUCR = (MCUCR & ~(1<<5)) | (1<<6); // Then set the BODS bit and clear the BODSE bit at the same time
   __asm__ __volatile__("sleep"); // In line assembler sleep execute instruction
+  delay(10);
   detachInterrupt(digitalPinToInterrupt(clockInterruptPin));
 }
 
 void wakeUpRoutine()
 {
-  
+  Wire.begin();
 }
 
 void goToSafeSleep(){

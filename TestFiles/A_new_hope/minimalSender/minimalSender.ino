@@ -4,6 +4,7 @@
 #include <TinyGPS++.h>              // Handling GPS data
 #include <EEPROM.h>                 // Administrating writing to/reading from EEPROM
 #include <SDI12.h>                  // Library for SDI-12 communication
+#include <avr/io.h>
 
 #include "systemConstants.h"        // Constants for the system
 RTC_DS3231 RTC;
@@ -15,6 +16,17 @@ int i = 0;
 
 void setup() {
   Serial.begin(9600);
+
+  // Set pinMode:
+  DDRB &= B11000000; // Not touching crystal
+  DDRC &= B10000000; // // Not touching unknown pin
+  DDRD &= B00000000; // 
+
+  PORTB |= B00111111; // Not touching crystal
+  PORTC |= B01111111; // Not touching unknown pin
+  PORTD |= B11111111; // 
+  
+
 
   initializeAlarm(); // Clear previous alarms and turn off SQW
   DateTime timeNow = RTC.now();
@@ -37,11 +49,12 @@ void loop() {
  Serial.print(i);
  Serial.println(F(". time"));
  i++;
+ delay(5000);
 
- getDepth();
- 
+ Serial.println(F("Going to sleep"));
  delay(500);
  goToSafeSleep();
+ Serial.println(F("\nWoke up from sleep"));
  
  TimeAlarm.setNextWakeupTime();
  TimeAlarm.setAlarm1();

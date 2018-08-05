@@ -1,3 +1,9 @@
+
+/*
+ * D4   -> Clock power
+ * 
+ * 
+ */
 #define clockInterruptPin 3
 #define SENDER_ADDRESS 2 // Range 1 to 4
 #define depthDataPin A0
