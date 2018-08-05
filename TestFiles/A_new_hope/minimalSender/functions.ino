@@ -52,16 +52,15 @@ void goToSleep()
   // Set pinMode:
   DDRB &= B11000000; // Not touching crystal
   DDRC &= B10000000; // Not touching unknown pin
-  DDRC |= B00110000; // Setting SCL and SDA as output
-  DDRD &= B00010000; // 
+  DDRC |= B00110100; // Setting SCL, SDA and GPS MOSFET pin as output
+  DDRD &= B00110000; // 
+  DDRD |= B00100000;
 
   PORTB |= B00111111; // Not touching crystal
   PORTC |= B01111111; // Not touching unknown pin
-  PORTC &= B11001111; // Setting SCL and SDA as LOW
-  PORTD |= B11101111; //
-  PORTD &= B11101111; // Set Clock power pin LOW
-
-  delay(10);
+  PORTC &= B11001011; // Setting SCL, SDA and GPS MOSFET pin as LOW
+  PORTD |= B11001111; //
+  PORTD &= B11001111; // Set Clock power pin and Depth Multiplexer&MOSFET pin LOW
   
   // Disable ADC
   ADCSRA &= ~(1<<7);

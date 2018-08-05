@@ -1,8 +1,10 @@
 
 /*
  * D4   -> Clock power
+ * D5   -> Depth Multiplexer and MOSFET pin
  * 
  * 
+ * A2   -> GPS MOSFET
  */
 #define clockInterruptPin 3
 #define SENDER_ADDRESS 2 // Range 1 to 4

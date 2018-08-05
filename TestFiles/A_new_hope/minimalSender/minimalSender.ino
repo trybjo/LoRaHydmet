@@ -19,25 +19,25 @@ void setup() {
 
   // Set pinMode:
   DDRB &= B11000000; // Not touching crystal
-  DDRC &= B10000000; // // Not touching unknown pin
-  DDRD &= B00010000; // 
-  DDRD |= B00010000;
+  DDRC &= B10000100; // // Not touching unknown pin
+  DDRC |= B00000100; // GPS MOSFET pin as OUTPUT
+  DDRD &= B00110000; // 
+  DDRD |= B00110000; // Clock power pin and Depth Multiplexer&MOSFET pin as output
 
   PORTB |= B00111111; // Not touching crystal
-  PORTC |= B01111111; // Not touching unknown pin
-  PORTD |= B11111111; // 
+  PORTC |= B01111011; // Not touching unknown pin
+  PORTC &= B11111011; // Setting GPS MOSFET pin LOW
+  PORTD |= B11011111; // 
+  PORTD &= B11011111; // Set Depth Multiplexer&MOSFET pin LOW
   
-
   delay(50);
   initializeAlarm(); // Clear previous alarms and turn off SQW
   DateTime timeNow = RTC.now();
-  
-  initializeWaterPressureSensor();
 
   Serial.println(F("Going to update clock"));
   updateClock(1);
   //getPosition();
-
+  
   TimeAlarm.setWakeUpPeriod(0, 1, 0);
   TimeAlarm.setAlarm1(1, 2*(SENDER_ADDRESS-2));
   printAlarm();
@@ -50,7 +50,12 @@ void loop() {
  Serial.print(i);
  Serial.println(F(". time"));
  i++;
- delay(5000);
+
+ initializeWaterPressureSensor();
+ SDI12 mySDI12(depthDataPin); // Define the SDI-12 bus
+ PORTD |= B00100000;
+ Serial.println(getDepth());
+ PORTD &= B11011111;
 
  Serial.println(F("Going to sleep"));
  delay(500);
