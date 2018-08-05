@@ -53,12 +53,14 @@ void goToSleep()
   DDRB &= B11000000; // Not touching crystal
   DDRC &= B10000000; // Not touching unknown pin
   DDRC |= B00110000; // Setting SCL and SDA as output
-  DDRD &= B00000000; // 
+  DDRD &= B00010000; // 
 
   PORTB |= B00111111; // Not touching crystal
   PORTC |= B01111111; // Not touching unknown pin
   PORTC &= B11001111; // Setting SCL and SDA as LOW
-  PORTD |= B11111111; //
+  PORTD |= B11101111; //
+  PORTD &= B11101111; // Set Clock power pin LOW
+
   delay(10);
   
   // Disable ADC
@@ -78,6 +80,7 @@ void goToSleep()
 
 void wakeUpRoutine()
 {
+  PORTD |= B00010000; // Set Clock power pin high
   Wire.begin();
 }
 

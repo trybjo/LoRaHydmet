@@ -20,14 +20,15 @@ void setup() {
   // Set pinMode:
   DDRB &= B11000000; // Not touching crystal
   DDRC &= B10000000; // // Not touching unknown pin
-  DDRD &= B00000000; // 
+  DDRD &= B00010000; // 
+  DDRD |= B00010000;
 
   PORTB |= B00111111; // Not touching crystal
   PORTC |= B01111111; // Not touching unknown pin
   PORTD |= B11111111; // 
   
 
-
+  delay(50);
   initializeAlarm(); // Clear previous alarms and turn off SQW
   DateTime timeNow = RTC.now();
   
