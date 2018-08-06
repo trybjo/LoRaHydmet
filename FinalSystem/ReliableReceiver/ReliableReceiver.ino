@@ -58,25 +58,5 @@ void loop() {
       writeDataToSerial(buf, (int)bufLen, from);
     }
     // The variable 'duplicate' is not in use yet.
-    
-    
-    /*
-    // After successful receive(s), send a message: 
-    if (receiveSuccess){
-      uint8_t data[] = "And hello back to you";
-      uint8_t numberedResponse[sizeof(packageNum) + sizeof(data)];
-      addPackageNum(&numberedResponse[0], &data[0], sizeof(data));
-      
-      if (!manager.sendtoWait(numberedResponse, sizeof(numberedResponse), from)){
-        // Serial.println("Sending failed");
-      }
-      else {
-        // Serial.print(F("Sending successful: "));
-        // Serial.print((int)numberedResponse[0]);
-        // Serial.println((char*)&numberedResponse[1]);
-        updatePackageNum();
-      }
-    }
-    */
   }
 }

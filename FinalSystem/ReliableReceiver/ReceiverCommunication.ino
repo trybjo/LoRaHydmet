@@ -116,25 +116,27 @@ void writeDataToSerial(uint8_t* message, int len, uint8_t from){
   // Humidity:
   sPrintData(message, 2, 3, 1);
   Serial.print(F(","));
+  
   // Pressure:
-  sPrintData(message, 3, 5, 0);
-  Serial.print(F(","));
+  // sPrintData(message, 3, 5, 0);
+  // Serial.print(F(","));
+  
   // Debth:
-  sPrintData(message, 3, 8, 0);
+  sPrintData(message, 3, 15, 0);
   Serial.print(F(","));
   // Latitude: 
-  sPrintData(message, 3, 15, 5);
+  sPrintData(message, 3, 5, 5);
   Serial.print(F(","));
   // Longditude:
-  sPrintData(message, 3, 18, 5);
+  sPrintData(message, 3, 8, 5);
   
-  if(len > 21){
+  if(len > 18){
     // Repeater Latitude
     Serial.print(F(","));
-    sPrintData(message, 3, 22, 5);
+    sPrintData(message, 3, 18, 5);
     Serial.print(F(","));
     // Repeater Longditude
-    sPrintData(message, 3, 25, 5);
+    sPrintData(message, 3, 21, 5);
   }
   
   Serial.println();
