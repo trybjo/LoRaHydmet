@@ -81,7 +81,7 @@ bool initializePacketNum(){
 void setSleepConfig(){
   DDRB = B00000000;
   DDRC = B00111100;   // SCL and SDA  and power for GPS and LoRa as output
-  DDRD = B00110000;   // Power for clock and depth Multiplexer&MOSFET set as output
+  DDRD = B01110000;   // Power for clock and depth Multiplexer&MOSFET set as output
   PORTB = ~DDRB;      // Pull all in-ports high
   PORTC = ~DDRC;      // Pull all in-ports high, turn off power for GPS and LoRa, set SCL and SDA low
   PORTD = ~DDRD;      // Pull all in-ports high, turn off power for clock and depth sensor
@@ -90,7 +90,7 @@ void setSleepConfig(){
 void setAwakePinConfig(){
   DDRB = B00111110;   // 
   DDRC = B00111100;
-  DDRD = B00110000;  
+  DDRD = B01110000;  
   PORTB = ~DDRB;
   PORTC = ~DDRC;
   PORTD = ~DDRD;
@@ -184,8 +184,20 @@ void initializeWaterPressureSensor()
 
 
 
+void activateHumiditySensor()
+{
+  am2320.begin();
+  delay(5);
+  // DDRD |= 1 << humidityPower; // Output
+  PORTD |= 1 << humidityPower; // HIGH GPS_POWER
+  delay(800); // Needs 800ms of power before getting readings. Will otherwise return 0.
+}
 
 
+void deactivateHumiditySensor()
+{
+  PORTD &= ~1 << humidityPower; // LOW, turn power off
+}
 
 
 

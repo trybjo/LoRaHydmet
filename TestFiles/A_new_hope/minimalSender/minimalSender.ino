@@ -7,6 +7,7 @@
 #include <avr/io.h>
 #include <Adafruit_Sensor.h>        // Library that some of Adafruit's sensors uses.
 #include <Adafruit_BMP280.h>        // Temperature and air pressure readings from the BMP280 chip.
+#include <Adafruit_AM2320.h>        // Humidity sensor
 #include "systemConstants.h"        // Constants for the system
 
 // LoRa: 
@@ -20,6 +21,7 @@ RHReliableDatagram manager(lora, SENDER_ADDRESS); // Instanciate the reliable se
 // Dynamic memory for receiving messages:
 uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
 uint8_t packageNum; 
+Adafruit_AM2320 am2320 = Adafruit_AM2320(); // Instance for the humidity sensor.
 
 
 
@@ -80,6 +82,10 @@ void loop() {
   delay(40);
   fillLongIntToPos(getTemperature(), 2, 1, data); // Temp data (2 bytes)
   Serial.println(F("Data collected"));
+
+  activateHumiditySensor();
+  fillLongIntToPos(getHumidity(), 2, 3, data);  // Humidity data (2 byte)
+  deactivateHumiditySensor();
 
   activateClock();
   fillLongIntToPos(TimeAlarm.getTimeStamp(), 4, 11, data);       // Filling time data to byte 11-14

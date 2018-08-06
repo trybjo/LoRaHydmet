@@ -180,3 +180,11 @@ long int getPressure()
   delay(10);
   return pressure;
 }
+
+
+long int getHumidity()
+{
+  long int humidity = (am2320.readHumidity() * 10 );
+  delay(10);
+  return humidity;
+}
