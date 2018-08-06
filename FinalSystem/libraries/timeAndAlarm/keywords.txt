@@ -1,0 +1,29 @@
+#######################################
+# Syntax Coloring Map For time and Alarm
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+timeAndAlarm	KEYWORD1
+
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+getTime 		KEYWORD2
+getTimeStamp		KEYWORD2
+timeDifference 		KEYWORD2
+adjustWakeUpTime	KEYWORD2
+setAlarm1		KEYWORD2
+stopAlarm		KEYWORD2
+setWakeUpPeriod		KEYWORD2
+setNextWakeupTime	KEYWORD2
+
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
