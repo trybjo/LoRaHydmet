@@ -48,20 +48,7 @@ void updatePackageNum(){
 void goToSleep()
 {
   attachInterrupt(digitalPinToInterrupt(clockInterruptPin), wakeUpRoutine, LOW);
-  // Set pinMode:
-  /*
-  DDRB &= B11000000; // Not touching crystal
-  DDRC &= B10000000; // Not touching unknown pin
-  DDRC |= B00110100; // Setting SCL, SDA and GPS MOSFET pin as output
-  DDRD &= B00110000; // 
-  DDRD |= B00100000;
 
-  PORTB |= B00111111; // Not touching crystal
-  PORTC |= B01111111; // Not touching unknown pin
-  PORTC &= B11001011; // Setting SCL, SDA and GPS MOSFET pin as LOW
-  PORTD |= B11001111; //
-  PORTD &= B11001111; // Set Clock power pin and Depth Multiplexer&MOSFET pin LOW
-  */
   setSleepConfig();
   
   // Disable ADC
@@ -170,4 +157,26 @@ int getDepth()
   Serial.println(depth);
   
   return depth;
+}
+
+
+
+
+
+// Returns temperature [*C] with two decimals precision.
+long int getTemperature()
+{
+  delay(50);
+  long int temp = (BMP.readTemperature() * 100);
+  delay(10);
+  return temp;
+}
+
+// Returns pressure [Pa].
+long int getPressure()
+{
+  delay(50);
+  long int pressure = BMP.readPressure();
+  delay(10);
+  return pressure;
 }

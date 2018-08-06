@@ -5,6 +5,8 @@
 #include <EEPROM.h>                 // Administrating writing to/reading from EEPROM
 #include <SDI12.h>                  // Library for SDI-12 communication
 #include <avr/io.h>
+#include <Adafruit_Sensor.h>        // Library that some of Adafruit's sensors uses.
+#include <Adafruit_BMP280.h>        // Temperature and air pressure readings from the BMP280 chip.
 #include "systemConstants.h"        // Constants for the system
 
 // LoRa: 
@@ -28,22 +30,7 @@ TinyGPSPlus gps;  //This is the GPS object that will pretty much do all the grun
 
 void setup() {
   Serial.begin(9600);
-  /*
-  // Set pinMode:
-  DDRB &= B11000000; // Not touching crystal
-  DDRC &= B10000100; // // Not touching unknown pin
-  DDRC |= B00000100; // GPS MOSFET pin as OUTPUT
-  DDRD &= B00110000; // 
-  DDRD |= B00110000; // Clock power pin and Depth Multiplexer&MOSFET pin as output
-
-  PORTB |= B00111111; // Not touching crystal
-  PORTC |= B01111011; // Not touching unknown pin
-  PORTC &= B11111011; // Setting GPS MOSFET pin LOW
-  PORTD |= B11011111; // 
-  PORTD &= B11011111; // Set Depth Multiplexer&MOSFET pin LOW
-  */
-  
-  
+ 
   setAwakePinConfig();
   delay(40);
   initializePacketNum();
@@ -87,7 +74,14 @@ void loop() {
   SDI12 mySDI12(depthDataPin);                                   // Define the SDI-12 bus
   PORTD |= B00100000;                                            //
   fillLongIntToPos(getDepth(), 3, 8, data);                      // Filling depth data to byte 8-10
-  PORTD &= B11011111;                                            //
+  PORTD &= B11011111;       
+
+  BMP.begin();
+  delay(40);
+  fillLongIntToPos(getTemperature(), 2, 1, data); // Temp data (2 bytes)
+  Serial.println(F("Data collected"));
+
+  activateClock();
   fillLongIntToPos(TimeAlarm.getTimeStamp(), 4, 11, data);       // Filling time data to byte 11-14
   fillPositionData(data);                                        // Position data (3 + 3 byte)
   /////////////////////////////////////////////////////////////////

@@ -81,7 +81,7 @@ bool initializePacketNum(){
 void setSleepConfig(){
   DDRB = B00000000;
   DDRC = B00111100;   // SCL and SDA  and power for GPS and LoRa as output
-  DDRD = B00110000;   // Power for clock and depth sensor set as output
+  DDRD = B00110000;   // Power for clock and depth Multiplexer&MOSFET set as output
   PORTB = ~DDRB;      // Pull all in-ports high
   PORTC = ~DDRC;      // Pull all in-ports high, turn off power for GPS and LoRa, set SCL and SDA low
   PORTD = ~DDRD;      // Pull all in-ports high, turn off power for clock and depth sensor
@@ -179,3 +179,16 @@ void initializeWaterPressureSensor()
   mySDI12.begin();
   delay(20);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
