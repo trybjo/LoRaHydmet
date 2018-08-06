@@ -28,21 +28,20 @@ void getPosition(){
 
 
 
-void fillLongIntToPos(long int inValue, int requiredSize, int startingPos, uint8_t* outValue){
-  uint8_t * _tempValue = (uint8_t *)&inValue;
-  for (int i = 0; i < requiredSize; i++){
-    outValue[startingPos + i] = _tempValue[i];
+void updatePackageNum(){
+  if (packageNum >= 7)
+  { 
+    packageNum = 0;
+    EEPROM.write(50,0);
+    EEPROM.write(57, 77);
+  } 
+  else
+  {
+    packageNum ++;
+    EEPROM.write(50+packageNum, packageNum);
+    EEPROM.write(50+packageNum-1, 77);
   }
 }
-
-// Does the same as fillLongIntToPos, but for the GPS coordinates.
-void fillPositionData(uint8_t outValue[messageLength]){
-  for (int i = 15; i < 21; i++){
-    outValue[i] = EEPROM.read(i);
-  }
-}
-
-
 
 
 
@@ -50,6 +49,7 @@ void goToSleep()
 {
   attachInterrupt(digitalPinToInterrupt(clockInterruptPin), wakeUpRoutine, LOW);
   // Set pinMode:
+  /*
   DDRB &= B11000000; // Not touching crystal
   DDRC &= B10000000; // Not touching unknown pin
   DDRC |= B00110100; // Setting SCL, SDA and GPS MOSFET pin as output
@@ -61,6 +61,8 @@ void goToSleep()
   PORTC &= B11001011; // Setting SCL, SDA and GPS MOSFET pin as LOW
   PORTD |= B11001111; //
   PORTD &= B11001111; // Set Clock power pin and Depth Multiplexer&MOSFET pin LOW
+  */
+  setSleepConfig();
   
   // Disable ADC
   ADCSRA &= ~(1<<7);
@@ -79,14 +81,17 @@ void goToSleep()
 
 void wakeUpRoutine()
 {
+  /*
   PORTD |= B00010000; // Set Clock power pin high
   Wire.begin();
+  */
 }
 
 void goToSafeSleep(){
   bool fakeWakeup = true;
   while (fakeWakeup){
     goToSleep();
+    activateClock();
     DateTime timeNow = RTC.now();
     bool correctHour = timeNow.hour() == EEPROM.read(846);
     bool correctMinute = timeNow.minute() == EEPROM.read(847);
@@ -105,8 +110,13 @@ void goToSafeSleep(){
   }
 }
 
-
-
+void storeInEEPROM(uint8_t data[], int dataLen)
+{
+ for(int i=0; i<dataLen; i++)
+ {
+  EEPROM.update(data[0]*100+i, data[i]);
+ }
+}
 
 
 void printAlarm(){
