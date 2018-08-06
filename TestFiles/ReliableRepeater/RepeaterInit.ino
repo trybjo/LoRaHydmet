@@ -2,7 +2,7 @@
 void initializeLoRa()
 {  
   DDRC |= 1 << LoRa_POWER;  // Output
-  PORTC |= 1 << LoRa_POWER; // HIGH, creates trouble  
+  PORTC |= 1 << LoRa_POWER; // HIGH
   
   //Set pinMode
   pinMode(LoRa_RST, OUTPUT);
@@ -68,6 +68,15 @@ void activateClock(){
   delay(40);
 }
 
+void turnOnGPS(){
+  DDRC |= 1 << GPS_POWER; // Output
+  PORTC |= 1 << GPS_POWER; // HIGH GPS_POWER
+  delay(40);
+}
+void turnOffGPS(){
+  PORTC &= ~1 << GPS_POWER; // LOW, turn power off
+}
+
 bool updateClock(int mode){
   if (mode == 1){
     if (! RTC.begin()) {
@@ -79,26 +88,69 @@ bool updateClock(int mode){
   }
   else
   {
-    DDRC |= 1 << GPS_POWER; // Output
-    PORTC |= 1 << GPS_POWER; // HIGH GPS_POWER
-    
-    Serial.println("GPS Start");//Just show to the monitor that the sketch has started
-    Wire.begin();
-    if (! RTC.begin()) {
-      while (1){
-        Serial.println(F("Couldn't find rtc"));
-      }
-    } 
+    RTC.begin();
+    bool connection = false; 
     int iterator = 0;
-    while (iterator < 4){
-      while(Serial.available())//While there are characters to come from the GPS
+    
+    for (int i = 0; i < 5; i++){
+      powerNap(8); // Sleeping for 8x8 seconds ~ 1 min
+      Serial.println(F("Woke"));
+      delay(100);
+      long int j = 0;
+      bool notGivenUp = true;
+      bool noData = true;
+      while(noData && notGivenUp)
       {
-        gps.encode(Serial.read());//This feeds the serial NMEA data into the library one char at a time
+        while(Serial.available())//While there are characters to come from the GPS
+        {
+             gps.encode(Serial.read());//This feeds the serial NMEA data into the library one char at a time
+        }
+        if(gps.location.isUpdated())//This will pretty much be fired all the time anyway but will at least reduce it to only after a package of NMEA data comes in
+        {  
+          Serial.println(F("Got data"));
+          noData = false;
+          connection = true;
+          Serial.println(gps.location.lat(), 6);
+        }
+        if(j>1000000)
+        {
+          Serial.println(F("Gives up this round"));
+          notGivenUp = false;
+        }
+        j++;
       }
-      if(gps.location.isUpdated())//This will pretty much be fired all the time anyway but will at least reduce it to only after a package of NMEA data comes in
-      {
-        iterator ++;
+      if(connection == true){
+        Serial.print(F("J = "));
+        Serial.println(j);
+        break;
+        }
+
+      /*
+      while(j < 10000)
+      { 
+        // Even with connection, we might need some rounds to read from the GPS
+        while(Serial.available())//While there are characters to come from the GPS
+        {
+          gps.encode(Serial.read());//This feeds the serial NMEA data into the library one char at a time
+        }
+        if(gps.location.isUpdated())
+        {
+          Serial.print(F("Found at: "));
+          Serial.println(j);
+          iterator ++;
+        }
+        j++;
       }
+      if (iterator > 3){
+        connection = true;
+        break;
+      }
+
+      */
+    }
+    
+    if (!connection){
+      return false;
     }
     uint16_t yy = gps.date.year();
     uint8_t mm = gps.date.month();
@@ -106,9 +158,11 @@ bool updateClock(int mode){
     uint8_t hh = gps.time.hour();
     uint8_t Min = gps.time.minute();
     uint8_t sec = gps.time.second();
+    Serial.println(hh);
+    Serial.println(mm);
     RTC.adjust(DateTime(yy, mm, dd, hh, Min, sec));
     
     Serial.println(TimeAlarm.getTimeStamp());
-    PORTC &= ~1 << GPS_POWER; // LOW, turn power off
+    return true;
   }
 }

@@ -32,33 +32,47 @@ void setup() {
   Serial.begin(9600);
   while (!Serial); // Wait for serial port to be available
 
-  
-  //DDRB &= ~(1 << (INIT_BUTTON - 8)); // Set pin 0 (digital 8) to input (0)
-  //if (DDRB >> INIT_BUTTON - 8){ // Read digital pin 8
-  pinMode(INIT_BUTTON, INPUT);
-  if (digitalRead(INIT_BUTTON)){
-    Serial.println("Here");
-    // Button is being pressed
-    // First time starting the repeater
-    whipeMemory();
-    activateClock();
-    updateClock(2);
+  // Read from the position memory: 
+  uint8_t positionData [messageLength + 6];
+  for (int i = 0; i < 6; i++){
+    positionData[i+ messageLength] = EEPROM.read(802 + i);
   }
-  // Temporarily
+  
+  
   activateClock();
-  updateClock(1);
+  DateTime timeNow = RTC.now();
+  pinMode(INIT_BUTTON, INPUT);
+  if (!digitalRead(INIT_BUTTON) || (!(timeNow.month() % 6 ) && EEPROM.read(801) != timeNow.month())){ 
+    // Button is being pressed
+    // OR the month indicates we should reboot, and last reboot was not this month
+    activateClock();
+    turnOnGPS();
+    Serial.println("GPS Start");//Just show to the monitor that the sketch has started
+    delay(100);
+    if (updateClock(2)){
+      // If the gps successfully got connection
+      Serial.println(F("We got the time!"));
+      getPosition();
+      EEPROM.update(801, timeNow.month());  // Indicating last month of clock-update
+    }
+    turnOffGPS();
+  }
+  EEPROM.update(800, timeNow.day());      // Indicating last date of reboot
+  
+  // Temporarily
+  
+  //updateClock(1);
   //////////////
   
   initializeLoRa();
-  activateClock();
+  
     
-  DateTime timeNow = RTC.now();
-  EEPROM.update(800, timeNow.day());      // Indicating last date of reboot
+  
   
   initializeAlarm();
 
   TimeAlarm.setWakeUpPeriod(0, 3, 0);  
-  TimeAlarm.setAlarm1(3, -30); // Set alarm 30 seconds before the next 3-minute:
+  TimeAlarm.setAlarm1(1, -30); // Set alarm 30 seconds before the next 1-minute:
 
   
   Serial.println(TimeAlarm.getTimeStamp());
@@ -100,7 +114,8 @@ void loop() {
       }        
       
       if (receiveSuccess && !duplicate && from != RECEIVER_ADDRESS){        
-        // We only store messages from the senders             
+        // We only store messages from the senders   
+        Serial.println(F("The message was from sender"));          
         writeMessageToMemory(buf, bufLen, from); 
         printMemory(from);        
       }
@@ -122,12 +137,7 @@ void loop() {
     // and if this date is not last reboot date
     rebootMCU();
   }
-  if (!(timeNow.month() % 6 ) && EEPROM.read(801) != timeNow.month()){
-    // If the month is dividable by 6
-    // and if this month is not last clock update month
-    updateClock(2);
-    EEPROM.update(801, timeNow.month());
-  }
+ 
   
   TimeAlarm.setNextWakeupTime();
   TimeAlarm.setAlarm1();

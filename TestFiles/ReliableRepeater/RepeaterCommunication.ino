@@ -23,6 +23,7 @@ bool myReceive(bool &duplicate, uint8_t* message, uint8_t* bufLen, uint8_t* from
 }
 
 
+
 // Pretends to be the original sender, and sends to the original destination
 bool forwardMessage(uint8_t* buf, int bufLen, uint8_t from, uint8_t to){
   // The following is supposed to replace the rest. 
@@ -34,6 +35,32 @@ void sendFromMemory(){
     sendFromMemory(i, RECEIVER_ADDRESS);
   }
 }
+void getPosition(){
+  int iterator = 0;
+  
+  while (iterator < 4){
+    while(Serial.available())//While there are characters to come from the GPS
+    {
+      gps.encode(Serial.read());//This feeds the serial NMEA data into the library one char at a time
+    }
+    if(gps.location.isUpdated())//This will pretty much be fired all the time anyway but will at least reduce it to only after a package of NMEA data comes in
+    {
+      iterator ++;
+    }
+  }
+  long int Lat = gps.location.lat() * 100000;
+  long int Lng = gps.location.lng() * 100000;
+  Serial.println(Lat);
+  Serial.println(Lng);
+  uint8_t positionData[6];
+  fillLongIntToPos(Lat, 3, 0, positionData);
+  fillLongIntToPos(Lng, 3, 3, positionData);
+  for (int i = 0; i < 6; i++){
+    // Writing the new position data to memory 802-807
+    EEPROM.update(802 + i, positionData[i]);
+  }
+}
+
 
 // Trying to send all elements of memory from given author
 // Pretending to be author when sending
@@ -42,13 +69,17 @@ void sendFromMemory(uint8_t author, uint8_t endDest){
     // Iterating over packet numbers
     if (queuedForSending(i, author)){
       // Only send messages queued for sending 
-      uint8_t buf [messageLength];
+      uint8_t message [messageLength + 6];
       // Storing from memory to uint8_t*
       for (int j = 0; j < messageLength; j++){
-        buf[j] = EEPROM.read(100*i + messageLength*(author-1) + j);
+        message[j] = EEPROM.read(100*i + messageLength*(author-1) + j);
       }
-      if (manager.sendtoWaitRepeater(&buf[0], messageLength, endDest, author)){ 
+      for (int j = 0; j < 6; j++){
+        message[j + messageLength] = EEPROM.read(802 + j);
+      }
+      if (manager.sendtoWaitRepeater(message, messageLength + 6, endDest, author)){ 
         // Trying to send from memory
+        
         Serial.println(F("Send from memory success"));
         deleteFromMemory(i, author);          
       }
@@ -59,7 +90,12 @@ void sendFromMemory(uint8_t author, uint8_t endDest){
     }
   }
 }
-
+void fillLongIntToPos(long int inValue, int requiredSize, int startingPos, uint8_t* outValue){
+  uint8_t * _tempValue = (uint8_t *)&inValue;
+  for (int i = 0; i < requiredSize; i++){
+    outValue[startingPos + i] = _tempValue[i];
+  }
+}
 void sendTimingError(byte &firstReceive, uint8_t from){
   Serial.print(F("Received a message at time: "));
   Serial.println(TimeAlarm.getTime());

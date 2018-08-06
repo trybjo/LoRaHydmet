@@ -22,7 +22,7 @@ void goToSafeSleep(){
       Serial.print(F("The clock is: "));
       Serial.println(TimeAlarm.getTimeStamp());
       Serial.println(TimeAlarm.getTime());
-      delay(40);
+      delay(200);
     }
   }
 }
@@ -49,16 +49,65 @@ void rebootMCU()
   } while(0);
 }
 
+void powerNap1(int n){
+  cli();
+  MCUSR = 0;
+  WDTCSR = (1<<WDCE)|(1<<WDE);
+  WDTCSR = 0;
+  WDTCSR = (1<<WDIE) | (1<<WDP3) | (1<<WDP0); // Set for interrupt mode
+  sei();
+
+}
+// Just a handler for the interrupt
+ISR(WDT_vect) {
+  MCUSR = 0;
+  wdt_disable();
+  /* ReEnable the watchdog interrupt,                                     *
+   * as this gets reset when entering this ISR and automatically enables  *
+   *the WDE signal that resets the MCU the next time the  timer overflows */
+  //WDTCSR |= (1<<WDIE);
+
+}
+
+
+// Puts the system to sleep for 'n' multiples of 8 seconds
+void powerNap(int n){
+  for (int i = 0; i < n; i++){
+    //MCUSR &= ~(1 << 3);  // Clear WDRF, Watchdog system reset flag
+
+    wdt_enable(WDTO_8S); // watchdog timer
+    SREG |= (1 << 7);       // Set global interrupt mode
+    WDTCSR |= (1 << 4);   // Set WDCE, Watchdog Change Enable
+    WDTCSR = B01110001;     // Set watchdog to 'Interrupt mode', 
+    sei(); // Enable all interrupts
+    
+    // Disable ADC
+    ADCSRA &= ~(1<<7);
+    
+    // Go to deep sleep
+    SMCR |= (1<<2); // Power down mode
+    SMCR |= 1; // Enable sleep
+    
+      
+    // BOD disable
+    MCUCR |= (3<<5); // Set both BODS and BODSE at the same time
+    MCUCR |= (1<<6);
+    MCUCR &= ~(1 << 5);
+    //MCUCR = (MCUCR & ~(1<<5)) | (1<<6); // Then set the BODS bit and clear the BODSE bit at the same time
+    __asm__ __volatile__("sleep"); // In line assembler sleep execute instruction
+  }
+}
+
 void goToSleep(){
   
   attachInterrupt(digitalPinToInterrupt(wakeUpPin), wakeUp, FALLING);
   // Disable ADC
   ADCSRA &= ~(1<<7);
 
-  // Set all possible pins as input
+  // Set all possible pins as input, pull them high
+  // Set all outports low
   setSleepConfig();
-  // Pull all input pins high
-  //setAllInportsHigh();
+  delay(100); // Needed in order to set output low, and pull high
   
   // Go to deep sleep
   SMCR |= (1<<2); // Power down mode
@@ -71,21 +120,52 @@ void goToSleep(){
   detachInterrupt(digitalPinToInterrupt(wakeUpPin));
 }
 void setAwakePinConfig(){
-  DDRC = B00111100;
   DDRB = B00111110;
+  DDRC = B00111100;
   DDRD = B00000000;  
+  PORTB = ~DDRB;
+  PORTC = ~DDRC;
+  PORTD = ~DDRD;
 }
 
 void setSleepConfig(){
-  DDRC = B00001100;
   DDRB = B00000000;
-  DDRD = B00010000;
+  DDRC = B00111100;   // Power for GPS and LoRa, set SCL and SDA 
+  DDRD = B00010000;   // Power for clock set as output
+  PORTB = ~DDRB;      // Pull all in-ports high
+  PORTC = ~DDRC;      // Pull all in-ports high, turn off power for GPS and LoRa turn SCL and SDA low
+  PORTD = ~DDRD;      // Pull all in-ports high, turn off power for clock
 }
 
-void setAllInportsHigh(){
-  PORTC = ~DDRC;
-  PORTB = ~DDRB;
-  PORTD = ~DDRD;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

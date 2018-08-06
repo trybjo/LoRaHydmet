@@ -40,3 +40,19 @@ void printMemory(int from){
   }
   Serial.println();
 }
+
+void sPrintData(uint8_t* input, int usedSize, int startPos, int decimals){
+  long int _temp = 0;
+  for (int i = startPos; i< startPos + usedSize; i++){
+    _temp += (long int)input[i] * toPowerOf(256, i-startPos); 
+  }
+  if (!decimals){
+    Serial.print(_temp);
+  }
+  else{
+    long int tenPower = toPowerOf(10,decimals);
+    Serial.print(_temp/tenPower); // Integer value
+    Serial.print(F("."));
+    Serial.print(_temp - tenPower*(_temp/tenPower)); // Decimals
+  }
+}
