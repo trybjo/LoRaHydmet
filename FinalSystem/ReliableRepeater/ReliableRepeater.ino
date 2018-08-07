@@ -50,7 +50,7 @@ void setup() {
     //turnOffGPS();
   }
   EEPROM.update(800, timeNow.day());      // Indicating last date of reboot
-  
+  updateClock(1);
   initializeAlarm();
   TimeAlarm.setWakeUpPeriod(0, 3, 0);  
   TimeAlarm.setAlarm1(1, -30); // Set alarm 30 seconds before the next 1-minute:
@@ -74,7 +74,8 @@ void loop() {
   Serial.print(F("Woke up at time :"));
   Serial.println(TimeAlarm.getTime());
   
-  byte firstReceiveFromSender = 0; // Byte is filled with ones for each sender 
+  //byte firstReceiveFromSender = 0; // Byte is filled with ones for each sender
+   
   // that has send messages. Used to time the first message received
   while(TimeAlarm.timeDifference() > -60){ 
     // Receiving for one minute
@@ -87,10 +88,13 @@ void loop() {
       uint8_t to; // to becomes the intended receiver of the message
       bool duplicate;
       
-      bool receiveSuccess = myReceive(duplicate, buf, &bufLen, &from, &to, 300);
+      bool receiveSuccess = myReceive(duplicate, buf, &bufLen, &from, &to, 200);
+      // Receiving this message messes up the sender
+      /*
       if (receiveSuccess){
         sendTimingError(firstReceiveFromSender, from);
       }        
+      */
       
       if (receiveSuccess && !duplicate && from != RECEIVER_ADDRESS){        
         // We only store messages from the senders   
@@ -102,6 +106,7 @@ void loop() {
         forwardMessage(buf, bufLen, from, to);
         writeMessageToMemory(buf, bufLen, from);
       }
+      
     }
   }
   

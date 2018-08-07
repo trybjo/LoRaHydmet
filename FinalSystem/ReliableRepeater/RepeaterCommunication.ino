@@ -105,14 +105,14 @@ void sendTimingError(byte &firstReceive, uint8_t from){
   if (!((firstReceive >> from) & 1)){
     // If this is the first message we get from the given sender
     firstReceive |= (1<<from); // Indicate that we now have got a message from the sender
-    int timeDiff = TimeAlarm.timeDifference() + 30 + 2*(from-2);
-    // The repeater starts 30 seconds early, the senders are off by 2*(from-2) seconds 
+    int timeDiff = TimeAlarm.timeDifference() + 30 + 5 + 2*(from-2);
+    // The repeater starts 30 seconds early, sender waits 5 sec for sensor input
+    // The senders are off by 2*(from-2) seconds 
     if (abs(timeDiff) > 15){
       // The time difference from now and when the sender should send message
       // Is larger than 15 seconds. 
       // We should send a message to that sender, and ask to change clock time
-      Serial.print(F("We got a message too late: "));
-      Serial.println(timeDiff);
+  
       uint8_t message[2];
       if (timeDiff < 0){
         message[0] = 0;
@@ -122,6 +122,8 @@ void sendTimingError(byte &firstReceive, uint8_t from){
       }
       message[1] = abs(timeDiff);
       manager.sendtoWaitRepeater(message, sizeof(message), from, (uint8_t)REPEATER_ADDRESS);
+      Serial.print(F("We got a message too late: "));
+      Serial.println(timeDiff);
     }        
   }
 }

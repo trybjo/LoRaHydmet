@@ -121,4 +121,4 @@
 /*--------------------------------------*
  * Change to the length of the message  *
  * -------------------------------------*/
-#define messageLength 22
+#define messageLength 18
