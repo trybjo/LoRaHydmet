@@ -24,13 +24,7 @@ void setup() {
     Serial.println(F("First time, initializing values to zero"));
     delay(50);
   }
-  /*
-  for (int i = 0; i < 4; i++){
-    packageMemory[i] = -1;
-  }
-  packageNum = 0;
-  packageMemoryPointer = 0;
-  */
+  
   //Serial.println(F("Signal Strength, Packet number, Temp, Humidity, Pressure, Debth, Time"));
   Serial.println(F("Receiver on"));
 }
