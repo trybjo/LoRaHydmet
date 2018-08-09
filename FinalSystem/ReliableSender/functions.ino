@@ -1,3 +1,4 @@
+// This function reads the position data of the GPS module and stores in in EEPROM position 5-11
 void getPosition(){
   int iterator = 0;
   while (iterator < 4){
@@ -97,9 +98,6 @@ int getDepth()
   
   return depth;
 }
-
-
-
 
 
 // Returns temperature [*C] with two decimals precision.
