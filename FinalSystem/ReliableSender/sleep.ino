@@ -48,6 +48,7 @@ void wakeUpRoutine()
   */
 }
 
+// Goes to sleep, and makes sure that only interrupts at the time of alarm wakes up the system
 void goToSafeSleep(){
   bool fakeWakeup = true;
   while (fakeWakeup){
