@@ -45,6 +45,7 @@ void initializeLoRa()
   LoRa.setCodingRate4(codingRateDenominator);
 }
 
+// Clears all previous alarms, if any
 void initializeAlarm()
 {
   pinMode(wakeUpPin, INPUT);
@@ -68,6 +69,7 @@ void activateClock(){
   delay(40);
 }
 
+// Turning on the GPS through MOSFET creates bugs in the total system
 void turnOnGPS(){
   DDRC |= 1 << GPS_POWER; // Output
   PORTC |= 1 << GPS_POWER; // HIGH GPS_POWER
@@ -90,6 +92,9 @@ bool updateClock(int mode){
   else
   {
     RTC.begin();
+    // The following code goes to sleep during search of GPS signal. 
+    // It is commented out as turning on gps needs to be done manually
+    // When turnOnGPS starts working, this code should be prefered over the next while loop.
     /*
     bool connection = false; 
     int iterator = 0;
