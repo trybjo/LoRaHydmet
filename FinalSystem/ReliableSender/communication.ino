@@ -1,4 +1,8 @@
 
+// Converts long int to uint8_t*
+// 'outValue' is an array that gets filled with the data in 'inValue'
+// 'requiredSize' is in bytes, and needs to be calculated. If this value is set too low, 'outValue' is filled
+// with wrong data
 void fillLongIntToPos(long int inValue, int requiredSize, int startingPos, uint8_t* outValue){
   uint8_t * _tempValue = (uint8_t *)&inValue;
   for (int i = 0; i < requiredSize; i++){
@@ -6,7 +10,8 @@ void fillLongIntToPos(long int inValue, int requiredSize, int startingPos, uint8
   }
 }
 
-// Does the same as fillLongIntToPos, but for the GPS coordinates.
+// Adds the position data stored in memory, to 'outValue'
+// by calling this function, the argument array will get filled
 void fillPositionData(uint8_t outValue[messageLength]){
   for (int i = 5; i < 11; i++){
     outValue[i] = EEPROM.read(i);
@@ -41,12 +46,21 @@ void sendFromEEPROM(){
   }
 }
 
+// This function is created to make it possible to read messages sent from the repeater, 
+// asking the sender to change the alarm time, to get in sync. 
+// Because the function recvfromAckTimeout is depending on there being a message on the buffer, 
+// this needs to be called frequently to make sure a message is read. 
+// By calling receiveTimoutMessage(500), the function will listen for messages ten times, up to a total of 500 ms
+// The if statements are created to match the spesific message from repeater, be aware of this when creating new 
+// messages sent from repeater to sender
+//
+// There are currently bugs appearing when calling this function.
 int receiveTimeoutMessage(int listenTime){
-  uint8_t buf[3];                                               //
-  uint8_t bufLen = sizeof(buf);                                 // Needs to be here to convert to uint8_t
-  uint8_t from;                                                 // from becomes author of the message
+  uint8_t buf[3];                                                 //
+  uint8_t bufLen = sizeof(buf);                                   // Needs to be here to convert to uint8_t
+  uint8_t from;                                                   // from becomes author of the message
   for ( int j = 0; j < 10; j ++){
-    if (manager.recvfromAckTimeout(buf, &bufLen, 200, &from)){   //
+    if (manager.recvfromAckTimeout(buf, &bufLen, 200, &from)){    //
       if (from == REPEATER_ADDRESS && bufLen == 2){               // Special message from repeater 
         Serial.print(F("We got time request: "));                 //
         int seconds = buf[1];                                     // Number of seconds to change the clock
