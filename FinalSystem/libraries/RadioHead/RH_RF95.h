@@ -806,7 +806,7 @@ private:
     volatile uint8_t    _bufLen;
     
     /// The receiver/transmitter buffer
-    uint8_t             _buf[RH_RF95_MAX_PAYLOAD_LEN];
+    uint8_t             _buf[40];
 
     /// True when there is a valid message in the buffer
     volatile bool       _rxBufValid;
