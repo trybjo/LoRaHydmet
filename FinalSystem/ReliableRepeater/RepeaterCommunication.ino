@@ -1,5 +1,10 @@
 
 // Receives message and detects duplicates
+// duplicates are detected by comparing the time-stamp on messages.
+// If there is no time-stamp, or the time-stamp position on the message is moved, this will not work properly
+// All arguments but 'timeout' are called by reference, causing the variables sent as arguments to be changed
+// Calling myReceive(dup, msg, &msgLen, &from, &to, 100) 
+// causes dup, msg, msgLen, from and to to be altered during run of this function
 bool myReceive(bool &duplicate, uint8_t* message, uint8_t* bufLen, uint8_t* from, uint8_t* to, int timeout){
   bool success;
   if (manager.recvfromAckTimeout(buf, bufLen, timeout, from, to)){
@@ -35,6 +40,9 @@ void sendFromMemory(){
     sendFromMemory(i, RECEIVER_ADDRESS);
   }
 }
+
+// Reads the GPS-position from the GPS-module
+// Writes the data to memory position bytes 802-807
 void getPosition(){
   int iterator = 0;
   
@@ -91,6 +99,11 @@ void sendFromMemory(uint8_t author, uint8_t endDest){
   }
 }
 
+// Converts long int to uint8_t*
+// 'outValue' is an array that gets filled with the data in 'inValue'
+// 'startingPos' is the first byte in outValue to get filled
+// 'requiredSize' is in bytes, and needs to be calculated. If this value is set too low, 'outValue' is filled
+// with wrong data
 void fillLongIntToPos(long int inValue, int requiredSize, int startingPos, uint8_t* outValue){
   uint8_t * _tempValue = (uint8_t *)&inValue;
   for (int i = 0; i < requiredSize; i++){
