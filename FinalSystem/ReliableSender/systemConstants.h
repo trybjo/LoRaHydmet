@@ -52,7 +52,7 @@ Adafruit_AM2320 am2320 = Adafruit_AM2320(); // Instance for the humidity sensor.
 
 /*-----------------------------------------------------*
  * Sender and receiver address for the LoRa module     *
- * Also defines maximum packet size, 22 byte for data, *
+ * Also defines maximum packet size, 29 byte for data, *
  * 1 byte for message length, 4 bytes header and 2 FCS *
  * Definition of RH_RF95_MAX_MESSAGE_LEN: RH_RF95.h    *
  * ----------------------------------------------------*/
