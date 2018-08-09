@@ -193,7 +193,7 @@ private:
     /// It is used for duplicate detection. Duplicated messages are re-acknowledged when received 
     /// (this is generally due to lost ACKs, causing the sender to retransmit, even though we have already
     /// received that message)
-    uint8_t _seenIds[256];
+    uint8_t _seenIds[5];
 };
 
 /// @example rf22_reliable_datagram_client.pde
