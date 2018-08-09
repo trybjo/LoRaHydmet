@@ -12,10 +12,10 @@ void setSleepConfig(){
 }
 
 void setAwakePinConfig(){
-  DDRB = B00111110;   // 
-  DDRC = B00111100;
+  DDRB = B00111110;   // Ports for LoRa
+  DDRC = B00111100;   
   DDRD = B01110000;  
-  PORTB = ~DDRB;
+  PORTB = ~DDRB;      // Pull in-ports high and set out-ports low
   PORTC = ~DDRC;
   PORTD = ~DDRD;
 }
