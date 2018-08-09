@@ -1,6 +1,7 @@
 
 // Converts long int to uint8_t*
 // 'outValue' is an array that gets filled with the data in 'inValue'
+// 'startingPos' is the first byte in outValue to get filled
 // 'requiredSize' is in bytes, and needs to be calculated. If this value is set too low, 'outValue' is filled
 // with wrong data
 void fillLongIntToPos(long int inValue, int requiredSize, int startingPos, uint8_t* outValue){
