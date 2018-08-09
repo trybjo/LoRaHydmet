@@ -57,7 +57,7 @@ Adafruit_AM2320 am2320 = Adafruit_AM2320(); // Instance for the humidity sensor.
  * Definition of RH_RF95_MAX_MESSAGE_LEN: RH_RF95.h    *
  * ----------------------------------------------------*/
  
-#define RH_RF95_MAX_MESSAGE_LEN 29
+// #define RH_RF95_MAX_MESSAGE_LEN 29 // This is by default 255
 #define RECEIVER_ADDRESS 5
 #define REPEATER_ADDRESS 6
 
