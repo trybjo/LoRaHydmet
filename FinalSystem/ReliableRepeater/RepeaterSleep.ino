@@ -49,15 +49,7 @@ void rebootMCU()
   } while(0);
 }
 
-void powerNap1(int n){
-  cli();
-  MCUSR = 0;
-  WDTCSR = (1<<WDCE)|(1<<WDE);
-  WDTCSR = 0;
-  WDTCSR = (1<<WDIE) | (1<<WDP3) | (1<<WDP0); // Set for interrupt mode
-  sei();
 
-}
 // Just a handler for the interrupt
 ISR(WDT_vect) {
   MCUSR = 0;
@@ -120,9 +112,9 @@ void goToSleep(){
   detachInterrupt(digitalPinToInterrupt(wakeUpPin));
 }
 void setAwakePinConfig(){
-  DDRB = B00111110;
+  DDRB = B00111110;   // Some pins used by LoRa set as output
   DDRC = B00111100;
-  DDRD = B00000000;  
+  DDRD = B00000000;   // Power for clock set as input, this should really be DDRD = B00010000; ?
   PORTB = ~DDRB;
   PORTC = ~DDRC;
   PORTD = ~DDRD;
