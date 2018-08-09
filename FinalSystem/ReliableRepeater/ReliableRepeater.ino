@@ -30,7 +30,7 @@ void setup() {
   turnOffWatchdogTimer();
   setAwakePinConfig();
   Serial.begin(9600);
-  while (!Serial); // Wait for serial port to be available
+  while (!Serial); 
 
   activateClock();
   DateTime timeNow = RTC.now();
@@ -38,22 +38,23 @@ void setup() {
   if (!digitalRead(INIT_SWITCH)){ // || (!(timeNow.month() % 6 ) && EEPROM.read(801) != timeNow.month())){ 
     // Button is being pressed
     // OR the month indicates we should reboot, and last reboot was not this month
+    // This or is commented out, as the function turnOnGPS() causes bugs to appear
     activateClock();
     //turnOnGPS();
-    Serial.println("GPS Start");//Just show to the monitor that the sketch has started
+    Serial.println(F("GPS Start"));  //Just show to the monitor that the sketch has started
     delay(100);
     if (updateClock(2)){
-      // If the gps successfully got connection
+      // If the gps successfully got connection, and read the time
       getPosition();
       EEPROM.update(801, timeNow.month());  // Indicating last month of clock-update
     }
     //turnOffGPS();
   }
   EEPROM.update(800, timeNow.day());      // Indicating last date of reboot
-  updateClock(1);
+  //updateClock(1); 
   initializeAlarm();
-  TimeAlarm.setWakeUpPeriod(0, 3, 0);  
-  TimeAlarm.setAlarm1(1, -30); // Set alarm 30 seconds before the next 1-minute:
+  TimeAlarm.setWakeUpPeriod(0, 3, 0);  // Wakes up every 3rd minute
+  TimeAlarm.setAlarm1(3, -30);         // Set alarm 30 seconds before the next 3-minute 
 
   
   Serial.println(TimeAlarm.getTimeStamp());
@@ -67,29 +68,30 @@ void setup() {
 void loop() {
   setAwakePinConfig();
   activateClock();
-
   TimeAlarm.stopAlarm();
   initializeLoRa();
+  
   printAlarm();
   Serial.print(F("Woke up at time :"));
   Serial.println(TimeAlarm.getTime());
   
   //byte firstReceiveFromSender = 0; // Byte is filled with ones for each sender
-   
-  // that has send messages. Used to time the first message received
+  // that has send messages. Used by sendTimingError
+  
   while(TimeAlarm.timeDifference() > -60){ 
     // Receiving for one minute
     // Negative time difference means the alarm has gone off already
     // As the time since alarm increases, the difference becomes more negative
     
     if (manager.available()){
-      uint8_t bufLen = sizeof(buf); // Needs to be here to convert to uint8_t
-      uint8_t from;  // from becomes author of the message
-      uint8_t to; // to becomes the intended receiver of the message
+      uint8_t bufLen = sizeof(buf);   // Needs to be here to convert to uint8_t
+      uint8_t from;                   // 'from' becomes author of the message
+      uint8_t to;                     // 'to' becomes the intended receiver of the message
       bool duplicate;
       
       bool receiveSuccess = myReceive(duplicate, buf, &bufLen, &from, &to, 200);
-      // Receiving this message messes up the sender
+      
+      // Sending this message messes up the sender:
       /*
       if (receiveSuccess){
         sendTimingError(firstReceiveFromSender, from);
@@ -104,7 +106,7 @@ void loop() {
       }
       else if (receiveSuccess && !duplicate && from == RECEIVER_ADDRESS){
         forwardMessage(buf, bufLen, from, to);
-        writeMessageToMemory(buf, bufLen, from);
+        writeMessageToMemory(buf, bufLen, from);    // To detect duplicates
       }
       
     }
